@@ -169,7 +169,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           id: userId,
           email,
           first_name: firstName,
-          last_name: '',
           role: 'ELDER',
           phone_number: ''
         }
