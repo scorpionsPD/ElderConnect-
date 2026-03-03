@@ -39,7 +39,7 @@ export default function SettingsPage() {
 
   // Profile settings state
   const [profileData, setProfileData] = useState({
-    fullName: user ? `${user.first_name || ''} ${user.last_name || ''}`.trim() : '',
+    fullName: user ? user.first_name || '' : '',
     email: user?.email || '',
     phone: user?.phone_number || '',
     address: '',
@@ -52,7 +52,7 @@ export default function SettingsPage() {
   useEffect(() => {
     if (!user) return
     setProfileData({
-      fullName: `${user.first_name || ''} ${user.last_name || ''}`.trim(),
+      fullName: user.first_name || '',
       email: user.email || '',
       phone: user.phone_number || '',
       address: '',
@@ -133,10 +133,8 @@ export default function SettingsPage() {
 
   const handleProfileSave = () => {
     setLoading(true)
-    const { firstName, lastName } = splitFullName(profileData.fullName)
     updateUser({
-      first_name: firstName || profileData.fullName,
-      last_name: lastName,
+      first_name: profileData.fullName,
       email: profileData.email,
       phone_number: profileData.phone,
       bio: profileData.bio,

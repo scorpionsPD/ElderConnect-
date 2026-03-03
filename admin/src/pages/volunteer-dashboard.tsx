@@ -47,7 +47,6 @@ const PLACEHOLDER_VOLUNTEER = {
   id: 'vol-001',
   email: 'volunteer@elderconnect.dev',
   first_name: 'Volunteer',
-  last_name: 'User',
   role: 'VOLUNTEER',
   phone_number: '',
   profile_picture_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop',
@@ -141,18 +140,11 @@ export default function VolunteerDashboard() {
     )
   }
 
-  const firstName = profileData?.first_name || 'User'
-  const lastName = profileData?.last_name || ''
-  const fullName = `${firstName} ${lastName}`.trim()
+  const fullName = profileData?.first_name || 'User'
 
   const getInitials = () => {
     if (!fullName || fullName === 'User') return 'U'
-    return fullName
-      .split(' ')
-      .map((part) => part[0])
-      .join('')
-      .slice(0, 2)
-      .toUpperCase()
+    return fullName[0].toUpperCase()
   }
 
   return (

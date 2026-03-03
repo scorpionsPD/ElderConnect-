@@ -61,18 +61,13 @@ export default function Layout({ children }: LayoutProps) {
     : 'admin'
   
   // Get display name - use actual first and last name from user
-  const userName = user ? `${user.first_name || ''} ${user.last_name || ''}`.trim() : 'User'
+  const userName = user ? user.first_name || 'User' : 'User'
   const userEmail = user?.email || 'user@elderconnect.com'
   
   // Get user initials for avatar
   const getInitials = () => {
     if (!userName) return 'U'
-    return userName
-      .split(' ')
-      .map((part) => part[0])
-      .join('')
-      .slice(0, 2)
-      .toUpperCase()
+    return userName[0].toUpperCase()
   }
 
   const handleLogout = async () => {

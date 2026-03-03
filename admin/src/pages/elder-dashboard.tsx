@@ -45,7 +45,6 @@ const PLACEHOLDER_ELDER = {
   id: 'elder-001',
   email: 'elder@elderconnect.dev',
   first_name: 'Elder',
-  last_name: 'User',
   role: 'ELDER',
   phone_number: '',
   profile_picture_url: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop',
@@ -163,18 +162,11 @@ export default function ElderDashboard() {
     )
   }
 
-  const firstName = profileData?.first_name || 'User'
-  const lastName = profileData?.last_name || ''
-  const fullName = `${firstName} ${lastName}`.trim()
+  const fullName = profileData?.first_name || 'User'
 
   const getInitials = () => {
     if (!fullName || fullName === 'User') return 'U'
-    return fullName
-      .split(' ')
-      .map((part) => part[0])
-      .join('')
-      .slice(0, 2)
-      .toUpperCase()
+    return fullName[0].toUpperCase()
   }
 
   const filteredCompanionRequests = requests.filter((request) => {

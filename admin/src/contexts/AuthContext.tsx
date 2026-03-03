@@ -5,7 +5,6 @@ export interface User {
   id: string
   email: string
   first_name: string
-  last_name?: string
   role: string
   phone_number?: string
   profile_picture_url?: string
@@ -69,7 +68,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               id: 'dev-test-user',
               email: 'test@elderconnect.dev',
               first_name: 'Test',
-              last_name: 'User',
               role: 'elder',
               phone_number: '555-0000'
             })
@@ -236,7 +234,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             id: response.data?.user?.id || 'new-user',
             email,
             first_name,
-            last_name: response.data?.user?.last_name || '',
             role,
             phone_number
           }
@@ -305,7 +302,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         id: `user-${Date.now()}`,
         email: updates.email || '',
         first_name: updates.first_name || '',
-        last_name: updates.last_name || '',
         role: updates.role || 'ELDER',
         phone_number: updates.phone_number || ''
       }

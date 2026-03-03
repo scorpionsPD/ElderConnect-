@@ -258,7 +258,6 @@ export default function SignupPage() {
         updateUser({
           ...(userData || {}),
           first_name: userData?.first_name || normalizedName,
-          last_name: userData?.last_name || '',
           role: userData?.role || selectedRole.toUpperCase(),
           email,
           bio: [
@@ -270,7 +269,7 @@ export default function SignupPage() {
               : '',
           ]
             .filter(Boolean)
-            .join('\n'),
+            .join(' | '),
         });
       }
       
