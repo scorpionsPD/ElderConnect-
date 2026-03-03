@@ -175,14 +175,13 @@ NEXT_PUBLIC_ADDRESS_PROVIDER=getaddress
   "devCommand": "npm run dev",
   "installCommand": "npm install",
   "framework": "nextjs",
-  "outputDirectory": "admin/.next",
-  "root": "admin",
+  "outputDirectory": ".next",
   "regions": ["iad1"]
 }
 ```
 
 Key points:
-- ✅ Root directory points to `./admin` (Next.js app location)
+- ✅ Set **Root Directory** to `./admin` in Vercel Project Settings (do not add `"root"` to `vercel.json`)
 - ✅ Build command runs Next.js build
 - ✅ Framework preset: Next.js
 - ✅ Output directory: `.next` (Next.js standard)
@@ -301,4 +300,3 @@ Solution: First build can take 5-10 minutes
 ---
 
 **Ready to deploy?** Follow `VERCEL_QUICKSTART.md` next! 🚀
-

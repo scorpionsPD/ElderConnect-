@@ -28,29 +28,29 @@ cd admin
 
 # Check lint
 echo -n "Linting... "
-if npm run lint 2>&1 | grep -q "error\|Error"; then
+if npm run lint >/dev/null 2>&1; then
+    echo -e "${GREEN}✓ PASSED${NC}"
+else
     echo -e "${RED}✗ FAILED${NC}"
     FAILURES=$((FAILURES + 1))
-else
-    echo -e "${GREEN}✓ PASSED${NC}"
 fi
 
 # Check types
 echo -n "Type checking... "
-if npm run type-check 2>&1 | grep -q "error\|Error"; then
+if npm run type-check >/dev/null 2>&1; then
+    echo -e "${GREEN}✓ PASSED${NC}"
+else
     echo -e "${RED}✗ FAILED${NC}"
     FAILURES=$((FAILURES + 1))
-else
-    echo -e "${GREEN}✓ PASSED${NC}"
 fi
 
 # Test build
 echo -n "Building... "
-if npm run build 2>&1 | grep -q "error\|Error"; then
+if npm run build >/dev/null 2>&1; then
+    echo -e "${GREEN}✓ PASSED${NC}"
+else
     echo -e "${RED}✗ FAILED${NC}"
     FAILURES=$((FAILURES + 1))
-else
-    echo -e "${GREEN}✓ PASSED${NC}"
 fi
 
 cd ..
