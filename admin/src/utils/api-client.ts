@@ -157,14 +157,34 @@ class ApiClient {
     phone_number?: string,
     date_of_birth?: string
   ): Promise<ApiResponse> {
+    const signupPayload = {
+      email,
+      role,
+      first_name,
+      phone_number,
+      date_of_birth
+    }
+
+    const response = await this.request('/signup', {
+      method: 'POST',
+      body: JSON.stringify(signupPayload)
+    })
+
+    // Backward compatibility for older deployed signup function versions
+    // that still require a non-empty last_name field.
+    if (response.success || !response.error?.toLowerCase().includes('last_name')) {
+      return response
+    }
+
+    const inferredLastName = first_name.trim().includes(' ')
+      ? first_name.trim().split(/\s+/).slice(1).join(' ')
+      : first_name.trim()
+
     return this.request('/signup', {
       method: 'POST',
       body: JSON.stringify({
-        email,
-        role,
-        first_name,
-        phone_number,
-        date_of_birth
+        ...signupPayload,
+        last_name: inferredLastName || first_name
       })
     })
   }
