@@ -1,0 +1,10 @@
+{
+  "version": "1.8.0",
+  "$schema": "https://json.schemastore.org/deno.json",
+  "tasks": {
+    "start": "supabase start",
+    "stop": "supabase stop",
+    "migrations": "supabase db push",
+    "reset": "supabase db reset"
+  }
+}

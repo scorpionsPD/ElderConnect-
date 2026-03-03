@@ -1,0 +1,133 @@
+name: elderconnect_plus
+description: "Community-driven elderly support mobile app. Completely free, donation-supported, GDPR compliant."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State Management
+  riverpod: ^2.4.0
+  flutter_riverpod: ^2.4.0
+  riverpod_generator: ^2.3.0
+
+  # Routing
+  go_router: ^13.0.0
+
+  # Supabase & Real-time
+  supabase_flutter: ^1.10.0
+  supabase: ^1.10.0
+
+  # HTTP & Networking
+  http: ^1.1.0
+  dio: ^5.3.0
+
+  # Local Storage
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+  shared_preferences: ^2.2.0
+
+  # Serialization
+  freezed_annotation: ^2.4.1
+  json_serializable: ^6.7.0
+
+  # Dependency Injection
+  get_it: ^7.6.0
+
+  # UI & Theme
+  google_fonts: ^6.1.0
+  flutter_screenutil: ^5.9.0
+  lottie: ^2.7.0
+
+  # Video Calls (Jitsi Integration)
+
+  # Messaging & Chat
+  uuid: ^4.0.0
+
+  # Accessibility
+  flutter_tts: any
+  permission_handler: any
+
+  # Image Handling
+  image_picker: ^1.0.4
+  cached_network_image: ^3.3.0
+
+  # Date & Time
+  intl: ^0.19.0
+
+  # Error Handling & Logging
+  dartz: ^0.10.1
+  logger: ^2.1.0
+
+  # Analytics
+  firebase_analytics: ^10.7.0
+  firebase_core: ^2.24.0
+
+  # Push Notifications
+  firebase_messaging: ^14.7.0
+
+  # Voice & Audio
+  record: ^4.4.4
+  just_audio: ^0.9.34
+
+  # Connectivity
+  connectivity_plus: ^5.0.0
+
+  # Sensors & Health Integration
+  health: any
+  pedometer: ^3.0.0
+
+  # QR Code
+  qr_flutter: ^4.1.0
+  qr_code_scanner: ^1.0.1
+
+  # Animations
+  flutter_animate: ^4.2.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^3.0.0
+  
+  # Code Generation
+  build_runner: ^2.4.6
+  freezed: ^2.4.1
+  riverpod_generator: ^2.3.0
+  json_serializable: ^6.7.0
+
+  # Testing
+  mocktail: ^1.0.0
+  integration_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/
+    - assets/icons/
+    - assets/animations/
+    - assets/videos/
+    - assets/fonts/
+
+  fonts:
+    - family: Poppins
+      fonts:
+        - asset: assets/fonts/Poppins-Regular.ttf
+        - asset: assets/fonts/Poppins-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/Poppins-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Poppins-Light.ttf
+          weight: 300
+    - family: OpenSans
+      fonts:
+        - asset: assets/fonts/OpenSans-Regular.ttf
+        - asset: assets/fonts/OpenSans-Bold.ttf
+          weight: 700

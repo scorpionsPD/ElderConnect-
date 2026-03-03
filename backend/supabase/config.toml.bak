@@ -1,0 +1,52 @@
+# Supabase Configuration
+# Generated: 2024
+
+project_id = "your-supabase-project-id"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "storage", "graphql_public"]
+max_rows = 1000
+
+[db]
+port = 54322
+major_version = 15
+shadow_database_url = "postgresql://postgres:postgres@127.0.0.1:54322/postgres"
+
+[studio]
+enabled = true
+port = 54323
+
+[inbucket]
+enabled = true
+smtp = { host = "127.0.0.1", port = 54324 }
+pop3 = { host = "127.0.0.1", port = 54325 }
+api = { host = "127.0.0.1", port = 54326 }
+web = { host = "127.0.0.1", port = 54327 }
+
+[storage]
+file_size_limit = 52428800
+
+[auth]
+enable_signup = true
+email_max_frequency = "1 sec"
+sms_max_frequency = "1 sec"
+rate_limit_as_status_code = false
+
+[auth.email]
+enable_signup = true
+double_confirm_changes = false
+enable_confirmations = true
+max_frequency = "1 sec"
+provider = "twilio"
+
+[auth.sms]
+enable_signup = true
+enable_confirmations = false
+max_frequency = "1 sec"
+
+[[auth.hook.custom_access_token]]
+enabled = true
+program = "supabase functions deploy custom_access_token"
+secrets = ["MY_SECRET"]

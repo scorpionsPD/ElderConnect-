@@ -1,0 +1,171 @@
+# Environment Files (NEVER commit these)
+.env
+.env.local
+.env.*.local
+.env.production
+.env.production.local
+
+# Secrets and Keys
+secrets/
+*.key
+*.pem
+*.p12
+*.p8
+
+# IDE and Editor Files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+*.sublime-project
+*.sublime-workspace
+
+# Flutter/Dart
+build/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+coverage/
+*.g.dart
+*.config.dart
+.packages
+pubspec.lock
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.eslintcache
+
+# Build outputs
+dist/
+out/
+.next/
+.nuxt/
+.cache/
+.output/
+.vuepress/dist/
+.vuepress/.cache/
+
+# Testing
+coverage/
+.nyc_output/
+*.lcov
+test-results/
+
+# OS Files
+*.log
+*.pid
+*.seed
+*.swp
+
+# Local databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Archives
+*.zip
+*.tar.gz
+*.rar
+
+# Package manager lock files (optional - comment out if needed)
+# package-lock.json
+# yarn.lock
+
+# Supabase local
+.supabase/
+supabase/.branches/
+supabase/.temp/
+
+# IDE directories
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Android
+android/.gradle/
+android/build/
+android/local.properties
+android/.idea/
+*.iml
+
+# iOS
+ios/Pods/
+ios/Podfile.lock
+ios/.symlinks/
+ios/Flutter/Flutter.podspec
+ios/Flutter/Flutter.framework
+ios/Flutter/GeneratedPluginRegistrant.*
+ios/Runner/GeneratedPluginRegistrant.*
+
+# Xcode
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+*.xcworkspace/xcuserdata/
+*.xcworkspace/xcshareddata/UserInterfaceState.xcuserstate
+**/*.playground/timeline.xctimeline
+
+# Generated code
+*.pb.dart
+*.pb.go
+*.proto.go
+
+# Temporary files
+tmp/
+temp/
+.tmp/
+
+# Mac
+.DS_Store
+.AppleDouble
+.LSOverride
+*.swp
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Linux
+.directory
+
+# Git
+.git/
+.gitmodules
+
+# Project specific
+/local_uploads/
+/backups/
+/reports/
+/temp_scripts/
+
+# Documentation
+site/
+docs/_build/
