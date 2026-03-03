@@ -4,21 +4,5 @@
   "installCommand": "npm install",
   "framework": "nextjs",
   "outputDirectory": ".next",
-  "env": [
-    "NEXT_PUBLIC_SUPABASE_URL",
-    "NEXT_PUBLIC_SUPABASE_ANON_KEY",
-    "NEXT_PUBLIC_API_URL",
-    "NEXT_PUBLIC_ENABLE_DEV_AUTH_MOCK",
-    "NEXT_PUBLIC_NOMINATIM_EMAIL",
-    "NEXT_PUBLIC_GETADDRESS_API_KEY",
-    "NEXT_PUBLIC_GETADDRESS_ADMIN_KEY",
-    "NEXT_PUBLIC_ADDRESS_PROVIDER"
-  ],
-  "regions": ["iad1"],
-  "public": true,
-  "git": {
-    "deploymentEnabled": {
-      "main": true
-    }
-  }
+  "regions": ["iad1"]
 }
