@@ -273,7 +273,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         id: `user-${Date.now()}`,
         email,
         first_name,
-        last_name: '',
         role,
         phone_number
       }
