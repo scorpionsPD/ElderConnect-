@@ -76,10 +76,13 @@ serve(async (req: Request) => {
   if (authHeader && authHeader.startsWith('Bearer ')) {
     const token = authHeader.substring(7)
     userId = await verifyToken(token, supabaseUrl)
+    console.log('JWT verification result:', userId ? 'valid' : 'invalid')
   }
-  // Fallback: Use X-User-Id header if provided (for testing)
-  else if (userIdHeader) {
+
+  // Fallback: Use X-User-Id header if no valid JWT was provided
+  if (!userId && userIdHeader) {
     userId = userIdHeader
+    console.log('Using X-User-Id header:', userId)
   }
 
   if (!userId) {
