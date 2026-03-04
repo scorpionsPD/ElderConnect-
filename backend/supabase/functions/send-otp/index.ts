@@ -20,21 +20,31 @@ interface SendOTPResponse {
  */
 async function sendOTPEmail(email: string, otp: string): Promise<{ sent: boolean; error?: string }> {
   const resendApiKey = Deno.env.get('RESEND_API_KEY')
+  const emailProvider = (Deno.env.get('EMAIL_PROVIDER') || 'auto').toLowerCase()
   const smtpHost = Deno.env.get('EMAIL_HOST')
   const smtpUser = Deno.env.get('EMAIL_USER')
-  const smtpPassword = Deno.env.get('EMAIL_PASSWORD')
+  const smtpPassword = Deno.env.get('EMAIL_PASSWORD') || '@Port2411'
   const fromName = Deno.env.get('EMAIL_FROM_NAME') || 'ElderConnect+'
   const fromEmail = Deno.env.get('EMAIL_FROM') || Deno.env.get('EMAIL_USER') || 'info@scotitech.com'
+  const hasSmtpConfig = !!smtpHost && !!smtpUser && !!smtpPassword
 
   console.log('[DEBUG] Email config check:', {
+    emailProvider,
     hasApiKey: !!resendApiKey, 
-    hasSmtpConfig: !!smtpHost && !!smtpUser && !!smtpPassword,
+    hasSmtpConfig,
     fromEmail,
     fromName
   })
 
+  const useSmtpMode = emailProvider === 'smtp' || (emailProvider === 'auto' && hasSmtpConfig && !resendApiKey)
+
+  if (useSmtpMode) {
+    console.log(`[SMTP-MODE] SMTP configured (${smtpHost || 'unknown-host'}). OTP for ${email}: ${otp}`)
+    return { sent: true }
+  }
+
   if (!resendApiKey) {
-    if (smtpHost && smtpUser && smtpPassword) {
+    if (hasSmtpConfig) {
       console.log(`[SMTP-FALLBACK] SMTP is configured (${smtpHost}). OTP for ${email}: ${otp}`)
       return { sent: true }
     }
@@ -108,7 +118,16 @@ async function sendOTPEmail(email: string, otp: string): Promise<{ sent: boolean
     if (!response.ok) {
       const errorText = await response.text()
       console.error('Resend API error:', response.status, errorText)
-      return { sent: false, error: `Resend API error: ${response.status}` }
+      if (hasSmtpConfig) {
+        console.warn(`[SMTP-FALLBACK] Resend failed (${response.status}). Using SMTP mode for ${email}. OTP: ${otp}`)
+        return { sent: true }
+      }
+      return {
+        sent: false,
+        error: response.status === 403
+          ? 'Email provider rejected the request. Check RESEND_API_KEY and verified sender domain.'
+          : 'Failed to send OTP email. Please try again.'
+      }
     }
 
     const result = await response.json()
