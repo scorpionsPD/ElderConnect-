@@ -11,23 +11,23 @@ interface SendOTPResponse {
   success: boolean
   message: string
   expires_in?: number
+  otp?: string
   error?: string
 }
 
 /**
- * Send OTP email via Hostinger SMTP
+ * Send OTP email via Resend API.
  */
-async function sendOTPEmailViaHostinger(email: string, otp: string): Promise<boolean> {
-  const host = Deno.env.get('EMAIL_HOST') || 'smtp.hostinger.com'
-  const port = Deno.env.get('EMAIL_PORT') || '465'
-  const user = Deno.env.get('EMAIL_USER') || 'info@scotitech.com'
-  const password = Deno.env.get('EMAIL_PASSWORD') || '@Port2411'
+async function sendOTPEmail(email: string, otp: string): Promise<{ sent: boolean; error?: string }> {
+  const resendApiKey = Deno.env.get('RESEND_API_KEY')
   const fromName = Deno.env.get('EMAIL_FROM_NAME') || 'ElderConnect+'
+  const fromEmail = Deno.env.get('EMAIL_FROM') || Deno.env.get('EMAIL_USER') || 'info@scotitech.com'
 
-  // If credentials not set, log to console
-  if (!user || !password) {
-    console.log(`[DEV] OTP for ${email}: ${otp}`)
-    return true
+  if (!resendApiKey || !fromEmail) {
+    return {
+      sent: false,
+      error: 'Email provider is not configured. Set RESEND_API_KEY and EMAIL_FROM.'
+    }
   }
 
   try {
@@ -69,15 +69,30 @@ async function sendOTPEmailViaHostinger(email: string, otp: string): Promise<boo
       </div>
     `
 
-    // For Deno environment, we'll use a simple approach
-    // Since Deno doesn't have native SMTP, we'll use console logging as fallback
-    console.log(`[HOSTINGER] Attempting to send OTP to ${email}`)
-    console.log(`[DEV] OTP for ${email}: ${otp}`)
-    
-    return true
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${resendApiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        from: `${fromName} <${fromEmail}>`,
+        to: [email],
+        subject: 'Your ElderConnect+ verification code',
+        html
+      })
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('Resend API error:', errorText)
+      return { sent: false, error: 'Failed to send OTP email. Please try again.' }
+    }
+
+    return { sent: true }
   } catch (error) {
-    console.error('Hostinger email error:', error)
-    return false
+    console.error('Email send error:', error)
+    return { sent: false, error: 'Failed to send OTP email. Please try again.' }
   }
 }
 
@@ -95,6 +110,9 @@ serve(async (req: Request) => {
   }
 
   try {
+    const runtimeEnv = (Deno.env.get('ENVIRONMENT') || Deno.env.get('NODE_ENV') || 'development').toLowerCase()
+    const isDevMode = runtimeEnv !== 'production'
+
     const body: SendOTPRequest = await req.json()
     const { email, phone_number } = body
 
@@ -157,13 +175,18 @@ serve(async (req: Request) => {
     }
 
     if (email) {
-      const emailSent = await sendOTPEmailViaHostinger(email, otpCode)
-      if (!emailSent) {
+      const emailResult = await sendOTPEmail(email, otpCode)
+      if (!emailResult.sent) {
+        if (isDevMode) {
+          // Developer-friendly fallback only in non-production environments.
+          console.log(`[DEV] OTP for ${email}: ${otpCode}`)
+        }
+
         await supabase.from('otp_codes').delete().eq('id', data.id)
         return new Response(
           JSON.stringify({
             success: false,
-            error: 'Failed to send OTP email. Please try again.'
+            error: emailResult.error || 'Failed to send OTP email. Please try again.'
           }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
@@ -177,7 +200,7 @@ serve(async (req: Request) => {
           ? `OTP sent to ${email}. It will expire in 10 minutes.`
           : `OTP sent to ${phone_number}. It will expire in 10 minutes.`,
         expires_in: 600,
-        otp: otpCode  // Return OTP for testing/development
+        ...(isDevMode ? { otp: otpCode } : {})
       }),
       { 
         status: 200, 
