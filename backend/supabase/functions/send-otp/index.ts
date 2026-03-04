@@ -23,7 +23,14 @@ async function sendOTPEmail(email: string, otp: string): Promise<{ sent: boolean
   const fromName = Deno.env.get('EMAIL_FROM_NAME') || 'ElderConnect+'
   const fromEmail = Deno.env.get('EMAIL_FROM') || Deno.env.get('EMAIL_USER') || 'info@scotitech.com'
 
+  console.log('[DEBUG] Resend config check:', { 
+    hasApiKey: !!resendApiKey, 
+    fromEmail,
+    fromName
+  })
+
   if (!resendApiKey || !fromEmail) {
+    console.error('[ERROR] Email config missing:', { resendApiKey: !!resendApiKey, fromEmail })
     return {
       sent: false,
       error: 'Email provider is not configured. Set RESEND_API_KEY and EMAIL_FROM.'
@@ -85,10 +92,12 @@ async function sendOTPEmail(email: string, otp: string): Promise<{ sent: boolean
 
     if (!response.ok) {
       const errorText = await response.text()
-      console.error('Resend API error:', errorText)
-      return { sent: false, error: 'Failed to send OTP email. Please try again.' }
+      console.error('Resend API error:', response.status, errorText)
+      return { sent: false, error: `Resend API error: ${response.status}` }
     }
 
+    const result = await response.json()
+    console.log('Resend API success:', result.id)
     return { sent: true }
   } catch (error) {
     console.error('Email send error:', error)
