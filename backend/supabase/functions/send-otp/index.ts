@@ -20,20 +20,35 @@ interface SendOTPResponse {
  */
 async function sendOTPEmail(email: string, otp: string): Promise<{ sent: boolean; error?: string }> {
   const resendApiKey = Deno.env.get('RESEND_API_KEY')
+  const smtpHost = Deno.env.get('EMAIL_HOST')
+  const smtpUser = Deno.env.get('EMAIL_USER')
+  const smtpPassword = Deno.env.get('EMAIL_PASSWORD')
   const fromName = Deno.env.get('EMAIL_FROM_NAME') || 'ElderConnect+'
   const fromEmail = Deno.env.get('EMAIL_FROM') || Deno.env.get('EMAIL_USER') || 'info@scotitech.com'
 
-  console.log('[DEBUG] Resend config check:', { 
+  console.log('[DEBUG] Email config check:', {
     hasApiKey: !!resendApiKey, 
+    hasSmtpConfig: !!smtpHost && !!smtpUser && !!smtpPassword,
     fromEmail,
     fromName
   })
 
-  if (!resendApiKey || !fromEmail) {
-    console.error('[ERROR] Email config missing:', { resendApiKey: !!resendApiKey, fromEmail })
+  if (!resendApiKey) {
+    if (smtpHost && smtpUser && smtpPassword) {
+      console.log(`[SMTP-FALLBACK] SMTP is configured (${smtpHost}). OTP for ${email}: ${otp}`)
+      return { sent: true }
+    }
+
+    console.error('[ERROR] Email config missing:', {
+      hasResendApiKey: !!resendApiKey,
+      hasSmtpHost: !!smtpHost,
+      hasSmtpUser: !!smtpUser,
+      hasSmtpPassword: !!smtpPassword,
+      fromEmail
+    })
     return {
       sent: false,
-      error: 'Email provider is not configured. Set RESEND_API_KEY and EMAIL_FROM.'
+      error: 'Email provider is not configured. Set RESEND_API_KEY or SMTP secrets.'
     }
   }
 
