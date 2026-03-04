@@ -59,12 +59,9 @@ const availability = [
 
 type UserRole = 'elder' | 'volunteer' | 'family';
 
-// Test OTP - hardcoded for development
-const TEST_OTP = '0000';
-
 export default function SignupPage() {
   const router = useRouter();
-  const { sendOTP, signup, updateUser } = useAuth();
+  const { sendOTP, signup, updateUser, login } = useAuth();
   const toast = useToast();
   
   const [step, setStep] = useState(0);
@@ -211,33 +208,33 @@ export default function SignupPage() {
   };
 
   const verifyOTP = async (otpValue: string) => {
-    // For development, use test OTP
-    if (otpValue === TEST_OTP) {
-      setOtpVerified(true);
-      toast.success('Email verified!');
-      // Auto-advance to next step after verification
-      setTimeout(() => {
-        if (name.trim() && email.trim()) {
-          nextStep();
-        }
-      }, 800);
-      return;
-    }
-
     setLoading(true);
+    setOtpError('');
     try {
-      // In a real app, verify via backend here
-      // For now, just check if it matches test OTP
+      const existingUser = await login(email, otpValue);
       setOtpVerified(true);
       toast.success('Email verified!');
-      // Auto-advance to next step after verification
+
+      // Existing user: already authenticated by login().
+      if (existingUser) {
+        const userRole = existingUser.role?.toLowerCase();
+        const dashboards: Record<string, string> = {
+          elder: '/elder-dashboard',
+          volunteer: '/volunteer-dashboard',
+          family: '/family-dashboard',
+        };
+        router.push(dashboards[userRole] || '/elder-dashboard');
+        return;
+      }
+
+      // New user: continue signup flow.
       setTimeout(() => {
-        if (name.trim() && email.trim()) {
-          nextStep();
-        }
+        if (name.trim() && email.trim()) nextStep();
       }, 800);
     } catch (err: any) {
-      toast.error('Invalid code');
+      const message = err?.message || 'Invalid OTP code. Please request a new one.';
+      setOtpError(message);
+      toast.error(message);
       setOtp(['', '', '', '']);
       otpRefs[0].current?.focus();
     } finally {

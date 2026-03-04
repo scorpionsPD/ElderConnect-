@@ -106,18 +106,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const sendOTP = async (email: string): Promise<string | null> => {
     setIsLoading(true)
     try {
-      // For development, generate a mock OTP locally
-      const mockOTP = Math.floor(1000 + Math.random() * 9000).toString()
-      console.log(`[DEV] Generated OTP for ${email}: ${mockOTP}`)
-      
-      // Still call the API to store the OTP
       const response = await apiClient.sendOTP(email)
       if (!response.success) {
         throw new Error(response.error || 'Failed to send OTP')
       }
-      
-      // Return the mock OTP for display
-      return mockOTP
+
+      // In development, backend may return OTP for testing.
+      return response.data?.otp || null
     } finally {
       setIsLoading(false)
     }
@@ -244,15 +239,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUser(userData)
           return userData
         }
+
+        // Preserve backend-provided validation/business errors for UI.
+        if (!isMockAuthEnabled) {
+          throw new Error(response.error || 'Signup failed. Please try again.')
+        }
       } catch (apiError) {
         console.error('[AUTH] Backend signup API failed:', apiError)
+
+        if (!isMockAuthEnabled) {
+          throw new Error(
+            apiError instanceof Error
+              ? apiError.message
+              : 'Signup failed. Please try again.'
+          )
+        }
       }
 
       // Local mock signup fallback (explicitly opt-in only)
-      if (!isMockAuthEnabled) {
-        throw new Error('Signup failed. Please check backend API configuration.')
-      }
-
       console.log('[DEV] Creating user locally (mock auth enabled)')
       
       // Generate a proper JWT token format
