@@ -15,6 +15,7 @@ interface ApiResponse<T = any> {
 class ApiClient {
   private baseURL: string
   private token: string | null = null
+  private userId: string | null = null
 
   constructor(baseURL: string = API_BASE_URL) {
     this.baseURL = baseURL
@@ -35,6 +36,16 @@ class ApiClient {
    */
   setToken(token: string): void {
     this.token = token
+    // Extract user_id from token payload
+    try {
+      const parts = token.split('.')
+      if (parts.length === 3) {
+        const payload = JSON.parse(atob(parts[1]))
+        this.userId = payload.user_id || payload.sub || null
+      }
+    } catch (e) {
+      console.warn('Failed to extract user_id from token')
+    }
     if (typeof window !== 'undefined') {
       localStorage.setItem('auth_token', token)
     }
@@ -45,6 +56,7 @@ class ApiClient {
    */
   clearToken(): void {
     this.token = null
+    this.userId = null
     if (typeof window !== 'undefined') {
       localStorage.removeItem('auth_token')
     }
@@ -264,8 +276,13 @@ class ApiClient {
    * Get current user profile
    */
   async getProfile(): Promise<ApiResponse> {
+    const headers: HeadersInit = {}
+    if (this.userId) {
+      headers['X-User-Id'] = this.userId
+    }
     return this.request('/get-profile', {
-      method: 'GET'
+      method: 'GET',
+      headers
     })
   }
 
@@ -273,8 +290,13 @@ class ApiClient {
    * Update user profile
    */
   async updateProfile(updates: Record<string, any>): Promise<ApiResponse> {
+    const headers: HeadersInit = {}
+    if (this.userId) {
+      headers['X-User-Id'] = this.userId
+    }
     return this.request('/get-profile', {
       method: 'PUT',
+      headers,
       body: JSON.stringify(updates)
     })
   }
