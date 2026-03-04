@@ -86,24 +86,91 @@ class ApiClient {
       ? false
       : !endpoint.includes('/auth/')
 
-    const response = await fetch(url, {
+    const requestInit: RequestInit = {
       ...options,
       headers: {
         ...this.getHeaders(includeAuth),
         ...(options.headers || {})
       }
-    })
-
-    const data = await response.json()
-
-    if (!response.ok) {
-      return {
-        success: false,
-        error: data.error || `Request failed with status ${response.status}`
-      }
     }
 
-    return data
+    try {
+      let response = await fetch(url, requestInit)
+      let payload = await this.parseResponsePayload(response)
+
+      // Retry once for transient upstream failures from edge/gateway.
+      if (this.shouldRetry(response.status, payload)) {
+        response = await fetch(url, requestInit)
+        payload = await this.parseResponsePayload(response)
+      }
+
+      if (!response.ok) {
+        return {
+          success: false,
+          error: this.extractErrorMessage(response.status, payload)
+        }
+      }
+
+      return payload as ApiResponse<T>
+    } catch (error) {
+      return {
+        success: false,
+        error: this.extractNetworkError(error)
+      }
+    }
+  }
+
+  private async parseResponsePayload(response: Response): Promise<any> {
+    const contentType = response.headers.get('content-type') || ''
+
+    if (contentType.includes('application/json')) {
+      return response.json()
+    }
+
+    const text = await response.text()
+    return { error: text || `Request failed with status ${response.status}` }
+  }
+
+  private shouldRetry(status: number, payload: any): boolean {
+    const text = String(payload?.error || payload?.message || '').toLowerCase()
+    const transientStatus = status === 502 || status === 503 || status === 504
+    const upstreamFailure =
+      text.includes('upstream connect error') ||
+      text.includes('local connection failure') ||
+      text.includes('socket creation failure')
+
+    return transientStatus || upstreamFailure
+  }
+
+  private extractErrorMessage(status: number, payload: any): string {
+    const rawMessage = String(payload?.error || payload?.message || '').trim()
+    const normalized = rawMessage.toLowerCase()
+
+    if (
+      normalized.includes('upstream connect error') ||
+      normalized.includes('local connection failure') ||
+      normalized.includes('socket creation failure')
+    ) {
+      return 'Verification service is temporarily unavailable. Please try again in a few seconds.'
+    }
+
+    if (rawMessage) {
+      return rawMessage
+    }
+
+    return `Request failed with status ${status}`
+  }
+
+  private extractNetworkError(error: unknown): string {
+    const message = error instanceof Error ? error.message : String(error)
+    if (
+      message.toLowerCase().includes('failed to fetch') ||
+      message.toLowerCase().includes('networkerror')
+    ) {
+      return 'Network error. Please check your internet connection and try again.'
+    }
+
+    return message || 'Network request failed'
   }
 
   /**
