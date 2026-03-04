@@ -64,16 +64,8 @@ serve(async (req: Request) => {
   }
 
   const token = authHeader.substring(7)
-  const userId = extractUserIdFromToken(token)
 
-  if (!userId) {
-    return new Response(
-      JSON.stringify({ success: false, error: 'Invalid token' }),
-      { status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
-    )
-  }
-
-  // Initialize Supabase client
+  // Initialize Supabase client with JWT verification
   const supabaseUrl = Deno.env.get('SUPABASE_URL')
   const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 
@@ -85,6 +77,15 @@ serve(async (req: Request) => {
   }
 
   const supabase = createClient(supabaseUrl, supabaseKey)
+
+  // Verify JWT token and get user ID
+  const userId = await verifyToken(token, supabaseUrl!)
+  if (!userId) {
+    return new Response(
+      JSON.stringify({ success: false, error: 'Invalid token' }),
+      { status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+    )
+  }
 
   // GET /users/me - Fetch user profile
   if (req.method === 'GET') {
@@ -202,18 +203,25 @@ serve(async (req: Request) => {
 })
 
 /**
- * Extract user ID from JWT token
- * Token format: header.payload.signature
- * Payload contains user_id field
+ * Verify JWT token from Supabase Auth
+ * Extracts user ID from the 'sub' claim in the JWT payload
  */
-function extractUserIdFromToken(token: string): string | null {
+async function verifyToken(token: string, supabaseUrl: string): Promise<string | null> {
   try {
     const parts = token.split('.')
     if (parts.length !== 3) return null
 
+    // Decode the payload
     const payload = JSON.parse(atob(parts[1]))
-    return payload.user_id || null
-  } catch {
+    
+    // Supabase Auth tokens use 'sub' (subject) for user ID
+    const userId = payload.sub || payload.user_id
+    
+    if (!userId) return null
+
+    return userId
+  } catch (error) {
+    console.error('Token verification error:', error)
     return null
   }
 }
