@@ -87,12 +87,12 @@ serve(async (req: Request) => {
     
     if (isDevelopment) {
       console.log(`[DEV] Accepting OTP ${code} for ${email || phone_number}`)
-      // For development, create or get user
+      // For development, check if user exists
       const userEmail = email || `user-${phone_number}@dev.local`
       
       const { data: existingUser } = await supabase
         .from('users')
-        .select('id, role')
+        .select('id, role, first_name')
         .eq('email', userEmail)
         .single()
 
@@ -111,48 +111,21 @@ serve(async (req: Request) => {
             token,
             user_id: existingUser.id,
             email: userEmail,
-            role: existingUser.role
+            role: existingUser.role,
+            is_new_user: false
           }),
           { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
         )
       } else {
-        // New user - create them
-        const { data: newUser, error: createError } = await supabase
-          .from('users')
-          .insert({
-            email: userEmail,
-            first_name: email ? email.split('@')[0] : 'User',
-            last_name: 'Dev',
-            role: 'ELDER',
-            is_verified: true
-          })
-          .select('id, role')
-          .single()
-
-        if (createError || !newUser) {
-          return new Response(
-            JSON.stringify({
-              success: false,
-              error: 'Failed to create user'
-            }),
-            { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
-          )
-        }
-
-        const token = await generateSessionToken({
-          user_id: newUser.id,
-          email: userEmail,
-          role: newUser.role,
-          verified: true
-        })
+        // New user - don't create them, let signup endpoint handle that
+        // Return is_new_user flag so frontend knows to show signup form
+        console.log(`[DEV] New user detected for ${userEmail}`)
         return new Response(
           JSON.stringify({
             success: true,
-            message: 'OTP verified successfully (DEV)',
-            token,
-            user_id: newUser.id,
-            email: userEmail,
-            role: newUser.role
+            message: 'OTP verified successfully - new user',
+            is_new_user: true,
+            email: userEmail
           }),
           { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
         )
