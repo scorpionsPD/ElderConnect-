@@ -15,7 +15,7 @@ interface ApiResponse<T = any> {
 class ApiClient {
   private baseURL: string
   private token: string | null = null
-  private userId: string | null = null
+  public userId: string | null = null  // Made public so it can be set directly after signup
 
   constructor(baseURL: string = API_BASE_URL) {
     this.baseURL = baseURL

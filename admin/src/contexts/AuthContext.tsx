@@ -176,11 +176,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             role,
             phone_number
           }
-          const token = response.data?.token
-          if (token) {
-            apiClient.setToken(token)
-            localStorage.setItem('auth_token', token)
+          
+          // Set userId directly from response since we don't have a token
+          // This allows getProfile to work with X-User-Id header
+          if (response.data?.user?.id) {
+            apiClient.userId = response.data.user.id
+            console.log('[AUTH] Set userId from signup response:', response.data.user.id)
           }
+          
           localStorage.setItem('user_data', JSON.stringify(userData))
           setUser(userData)
           return userData
