@@ -179,6 +179,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const token = response.data?.token
           if (token) {
             apiClient.setToken(token)
+            localStorage.setItem('auth_token', token)
           }
           localStorage.setItem('user_data', JSON.stringify(userData))
           setUser(userData)

@@ -163,6 +163,21 @@ serve(async (req: Request) => {
         created_at: new Date().toISOString()
       })
 
+    // Generate JWT token for the new user
+    const tokenHeader = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
+    const tokenPayload = btoa(JSON.stringify({
+      user_id: userId,
+      email: email,
+      role: role,
+      iss: 'supabase',
+      sub: userId,
+      aud: 'authenticated',
+      iat: Math.floor(Date.now() / 1000),
+      exp: Math.floor(Date.now() / 1000) + 3600 // 1 hour expiry
+    }))
+    const tokenSignature = 'dev_signature'
+    const token = `${tokenHeader}.${tokenPayload}.${tokenSignature}`
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -172,7 +187,8 @@ serve(async (req: Request) => {
           email: newUser.email,
           role: newUser.role,
           name: last_name ? `${first_name} ${last_name}` : first_name
-        }
+        },
+        token: token
       }),
       { 
         status: 201, 
