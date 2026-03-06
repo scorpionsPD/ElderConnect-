@@ -96,6 +96,15 @@ export default function SignupPage() {
   const [addressLatitude, setAddressLatitude] = useState<number | undefined>();
   const [addressLongitude, setAddressLongitude] = useState<number | undefined>();
 
+  // Initialize from query params (when redirected from login for new user)
+  useEffect(() => {
+    if (router.query.email) {
+      setEmail(router.query.email as string);
+      setOtpVerified(true); // OTP already verified in login
+      setStep(1); // Skip to account details step
+    }
+  }, [router.query]);
+
   // Reset OTP state when going back to step 0
   const resetOtpState = () => {
     setOtp(['', '', '', '']);

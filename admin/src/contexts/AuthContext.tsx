@@ -121,61 +121,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (email: string, otp: string): Promise<User | undefined> => {
     setIsLoading(true)
     try {
-      // Optional local mock login flow (explicitly opt-in only)
-      if (isMockAuthEnabled && otp.match(/^\d{4}$/)) {
-        console.log('[DEV] Accepting 4-digit OTP for development')
-        
-        // Create a proper JWT token for development (format: header.payload.signature)
-        // This allows companion-requests and other endpoints to parse user_id from the token
-        const userId = `user-${Date.now()}`
-        const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
-        const payload = btoa(JSON.stringify({ 
-          user_id: userId,
-          email: email,
-          iss: 'supabase',
-          role: 'authenticated'
-        }))
-        const signature = 'dev_signature'
-        const devToken = `${header}.${payload}.${signature}`
-        
-        apiClient.setToken(devToken)
-        localStorage.setItem('auth_token', devToken)
-
-        // Reuse stored user data if it matches this email (preserves role/name)
-        const storedUser = localStorage.getItem('user_data')
-        if (storedUser) {
-          try {
-            const parsedUser = JSON.parse(storedUser) as User
-            if (parsedUser?.email === email) {
-              setUser(parsedUser)
-              console.log('[DEV] Restored mock user from localStorage:', parsedUser)
-              return parsedUser
-            }
-          } catch (error) {
-            console.warn('[DEV] Failed to parse stored user data:', error)
-          }
-        }
-
-        // Extract first name from email
-        const firstName = email.split('@')[0]
-
-        // Create mock user with the email (no last_name for single-name users)
-        const mockUser: User = {
-          id: userId,
-          email,
-          first_name: firstName,
-          role: 'ELDER',
-          phone_number: ''
-        }
-
-        // Save user data to localStorage for persistence
-        localStorage.setItem('user_data', JSON.stringify(mockUser))
-
-        console.log('[DEV] Created mock user:', mockUser)
-        setUser(mockUser)
-        return mockUser
-      }
-
       // Verify OTP via backend API
       const response = await apiClient.verifyOTP(otp, email)
       if (!response.success) {

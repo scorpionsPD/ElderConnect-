@@ -128,9 +128,10 @@ export default function LoginPage() {
       console.log('Login response userData:', userData);
 
       if (!userData) {
-        console.warn('No user data returned from login API');
-        setError('Login failed. Please try again.');
-        toast.error('Login failed. Please try again.');
+        // New user detected - redirect to signup page
+        console.log('New user detected, redirecting to signup');
+        toast.info('Please complete your signup');
+        router.push(`/signup?email=${encodeURIComponent(email)}&otp=${otpValue}`);
         return;
       }
 
