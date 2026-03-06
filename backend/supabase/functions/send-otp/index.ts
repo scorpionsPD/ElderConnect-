@@ -21,7 +21,7 @@ interface SendOTPResponse {
 async function sendOTPEmail(email: string, otp: string): Promise<{ sent: boolean; error?: string }> {
   const resendApiKey = Deno.env.get('RESEND_API_KEY')
   const fromName = Deno.env.get('EMAIL_FROM_NAME') || 'ElderConnect+'
-  const fromEmail = Deno.env.get('EMAIL_FROM') || Deno.env.get('EMAIL_USER') || 'info@scotitech.com'
+  const fromEmail = Deno.env.get('EMAIL_FROM') || 'onboarding@resend.dev'
 
   console.log('[DEBUG] Email config check:', {
     hasApiKey: !!resendApiKey, 
@@ -96,11 +96,22 @@ async function sendOTPEmail(email: string, otp: string): Promise<{ sent: boolean
     if (!response.ok) {
       const errorText = await response.text()
       console.error('Resend API error:', response.status, errorText)
+
+      const lowerError = errorText.toLowerCase()
+      const isResendTestModeRestriction =
+        lowerError.includes('testing emails') ||
+        lowerError.includes('verify a domain') ||
+        lowerError.includes('not allowed to send') ||
+        lowerError.includes('test mode')
+
       return {
         sent: false,
-        error: response.status === 403
-          ? 'Email provider rejected the request. Check RESEND_API_KEY and verified sender domain.'
-          : 'Failed to send OTP email. Please try again.'
+        error:
+          response.status === 403 && isResendTestModeRestriction
+            ? 'Resend is in test mode. It can only email your own account address. Verify a domain in Resend to send OTPs to all users.'
+            : response.status === 403
+              ? 'Email provider rejected the request. Check RESEND_API_KEY and verified sender domain.'
+              : 'Failed to send OTP email. Please try again.'
       }
     }
 
