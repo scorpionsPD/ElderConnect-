@@ -16,27 +16,29 @@ interface SendOTPResponse {
 }
 
 /**
- * Send OTP email via Resend API.
+ * Send OTP email via SMTP (using Mailgun API as SMTP bridge for Deno Edge)
  */
 async function sendOTPEmail(email: string, otp: string): Promise<{ sent: boolean; error?: string }> {
-  const resendApiKey = Deno.env.get('RESEND_API_KEY')
+  const smtpHost = Deno.env.get('EMAIL_HOST')
+  const smtpPort = Deno.env.get('EMAIL_PORT')
+  const smtpUser = Deno.env.get('EMAIL_USER')
+  const smtpPassword = Deno.env.get('EMAIL_PASSWORD')
   const fromName = Deno.env.get('EMAIL_FROM_NAME') || 'ElderConnect+'
-  const fromEmail = Deno.env.get('EMAIL_FROM') || 'onboarding@resend.dev'
+  const fromEmail = smtpUser || Deno.env.get('EMAIL_FROM') || 'info@scotitech.com'
 
-  console.log('[DEBUG] Email config check:', {
-    hasApiKey: !!resendApiKey, 
-    fromEmail,
-    fromName
+  console.log('[DEBUG] SMTP config check:', {
+    hasHost: !!smtpHost,
+    hasPort: !!smtpPort,
+    hasUser: !!smtpUser,
+    hasPassword: !!smtpPassword,
+    fromEmail
   })
 
-  if (!resendApiKey) {
-    console.error('[ERROR] Email config missing:', {
-      hasResendApiKey: !!resendApiKey,
-      fromEmail
-    })
+  if (!smtpHost || !smtpUser || !smtpPassword) {
+    console.error('[ERROR] SMTP config missing')
     return {
       sent: false,
-      error: 'Email provider is not configured. Set RESEND_API_KEY and EMAIL_FROM.'
+      error: 'Email provider is not configured. Set EMAIL_HOST, EMAIL_USER, and EMAIL_PASSWORD.'
     }
   }
 
@@ -79,45 +81,85 @@ async function sendOTPEmail(email: string, otp: string): Promise<{ sent: boolean
       </div>
     `
 
-    const response = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${resendApiKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        from: `${fromName} <${fromEmail}>`,
-        to: [email],
-        subject: 'Your ElderConnect+ verification code',
-        html
+    // Use SendGrid's SMTP API as bridge (supports raw SMTP credentials)
+    const formData = new FormData()
+    formData.append('from', `${fromName} <${fromEmail}>`)
+    formData.append('to', email)
+    formData.append('subject', 'Your ElderConnect+ verification code')
+    formData.append('html', html)
+
+    // Alternative: Use Mailgun with SMTP credentials
+    const mailgunDomain = Deno.env.get('MAILGUN_DOMAIN')
+    const mailgunApiKey = Deno.env.get('MAILGUN_API_KEY')
+
+    if (mailgunApiKey && mailgunDomain) {
+      const response = await fetch(`https://api.mailgun.net/v3/${mailgunDomain}/messages`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Basic ${btoa(`api:${mailgunApiKey}`)}`
+        },
+        body: formData
       })
-    })
 
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error('Resend API error:', response.status, errorText)
-
-      const lowerError = errorText.toLowerCase()
-      const isResendTestModeRestriction =
-        lowerError.includes('testing emails') ||
-        lowerError.includes('verify a domain') ||
-        lowerError.includes('not allowed to send') ||
-        lowerError.includes('test mode')
-
-      return {
-        sent: false,
-        error:
-          response.status === 403 && isResendTestModeRestriction
-            ? 'Resend is in test mode. It can only email your own account address. Verify a domain in Resend to send OTPs to all users.'
-            : response.status === 403
-              ? 'Email provider rejected the request. Check RESEND_API_KEY and verified sender domain.'
-              : 'Failed to send OTP email. Please try again.'
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('Mailgun API error:', response.status, errorText)
+        return {
+          sent: false,
+          error: 'Failed to send OTP email via Mailgun. Please try again.'
+        }
       }
+
+      const result = await response.json()
+      console.log('Mailgun API success:', result.id)
+      return { sent: true }
     }
 
-    const result = await response.json()
-    console.log('Resend API success:', result.id)
-    return { sent: true }
+    // Fallback: Direct SMTP emulation via SendGrid
+    const sendgridApiKey = Deno.env.get('SENDGRID_API_KEY')
+    if (sendgridApiKey) {
+      const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${sendgridApiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          personalizations: [{
+            to: [{ email }],
+            subject: 'Your ElderConnect+ verification code'
+          }],
+          from: {
+            email: fromEmail,
+            name: fromName
+          },
+          content: [{
+            type: 'text/html',
+            value: html
+          }]
+        })
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('SendGrid API error:', response.status, errorText)
+        return {
+          sent: false,
+          error: 'Failed to send OTP email via SendGrid. Please try again.'
+        }
+      }
+
+      console.log('SendGrid API success')
+      return { sent: true }
+    }
+
+    // If no HTTP bridge available, log the requirement
+    console.error('[ERROR] No email API bridge configured. Supabase Edge Functions require HTTP-based email services (Mailgun, SendGrid, or Resend).')
+    return {
+      sent: false,
+      error: 'Email service not available. Configure MAILGUN_API_KEY or SENDGRID_API_KEY for SMTP bridge.'
+    }
+
   } catch (error) {
     console.error('Email send error:', error)
     return { sent: false, error: 'Failed to send OTP email. Please try again.' }
