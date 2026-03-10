@@ -2,6 +2,7 @@ import React from 'react'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
+import apiClient from '@/utils/api-client'
 import { 
   LayoutDashboard, 
   Users, 
@@ -31,14 +32,11 @@ const adminNavigation = [
 
 const elderNavigation = [
   { name: 'Dashboard', href: '/elder-dashboard', icon: LayoutDashboard },
-  { name: 'Companion Requests', href: '/companion-requests', icon: Users },
-  { name: 'Health Check-ins', href: '/health-checkins', icon: Heart },
   { name: 'Settings', href: '/settings', icon: Settings },
 ]
 
 const volunteerNavigation = [
   { name: 'Dashboard', href: '/volunteer-dashboard', icon: LayoutDashboard },
-  { name: 'Companion Requests', href: '/companion-requests', icon: Users },
   { name: 'Settings', href: '/settings', icon: Settings },
 ]
 
@@ -53,6 +51,7 @@ export default function Layout({ children }: LayoutProps) {
   const router = useRouter()
   const { user, logout } = useAuth()
   const [sidebarOpen, setSidebarOpen] = React.useState(false)
+  const [pendingConfirmations, setPendingConfirmations] = React.useState(0)
   
   // Get user role - map from our User interface to local UserRole type
   const userRole: UserRole = user?.role?.toLowerCase() === 'elder' ? 'elder'
@@ -82,6 +81,40 @@ export default function Layout({ children }: LayoutProps) {
       : userRole === 'family'
         ? familyNavigation
         : adminNavigation
+
+  React.useEffect(() => {
+    let cancelled = false
+
+    const fetchPendingConfirmations = async () => {
+      const role = user?.role?.toLowerCase()
+      if (role !== 'elder' && role !== 'volunteer') {
+        if (!cancelled) setPendingConfirmations(0)
+        return
+      }
+
+      const response = await apiClient.getCompanionRequests()
+      if (!response.success || !Array.isArray(response.data)) {
+        if (!cancelled) setPendingConfirmations(0)
+        return
+      }
+
+      const waitingFor = role === 'elder' ? 'ELDER' : 'VOLUNTEER'
+      const count = response.data.filter((req: any) =>
+        (req?.status === 'ACCEPTED' || req?.status === 'IN_PROGRESS') &&
+        req?.completion?.waiting_for === waitingFor
+      ).length
+
+      if (!cancelled) setPendingConfirmations(count)
+    }
+
+    fetchPendingConfirmations()
+    const interval = window.setInterval(fetchPendingConfirmations, 30000)
+
+    return () => {
+      cancelled = true
+      window.clearInterval(interval)
+    }
+  }, [router.asPath, user?.role])
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -115,7 +148,9 @@ export default function Layout({ children }: LayoutProps) {
           <nav className="flex-1 px-4 py-6 space-y-2">
             {navigation.map((item) => {
               const Icon = item.icon
-              const isActive = router.pathname === item.href
+              const isActive = item.href.includes('?')
+                ? router.asPath.startsWith(item.href)
+                : router.pathname === item.href
               return (
                 <Link
                   key={item.name}
@@ -158,6 +193,11 @@ export default function Layout({ children }: LayoutProps) {
               <Menu className="w-6 h-6" />
             </button>
             <div className="flex items-center space-x-4 ml-auto">
+              {(userRole === 'elder' || userRole === 'volunteer') && pendingConfirmations > 0 && (
+                <div className="px-3 py-1.5 rounded-full bg-amber-100 text-amber-800 text-xs font-semibold border border-amber-200">
+                  Needs Confirmation: {pendingConfirmations}
+                </div>
+              )}
               <div className="text-right">
                 <p className="text-sm font-medium text-gray-900">{userName || 'User'}</p>
                 <p className="text-xs text-gray-500">{userEmail}</p>

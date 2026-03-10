@@ -12,3 +12,6 @@ export type { DashboardStats } from './useStats'
 
 export { usePreferences } from './usePreferences'
 export type { UserPreferences } from './usePreferences'
+
+export { useCompanionMessages } from './useCompanionMessages'
+export type { CompanionMessage } from './useCompanionMessages'

@@ -25,6 +25,7 @@ import {
 import Button from '@/components/Button';
 import AddressAutocomplete from '@/components/AddressAutocomplete';
 import { AddressSuggestion } from '@/types/address';
+import apiClient from '@/utils/api-client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
 
@@ -259,6 +260,28 @@ export default function SignupPage() {
       // Call backend signup endpoint
       const normalizedName = name.trim().replace(/\s+/g, ' ');
       const userData = await signup(email, selectedRole.toUpperCase(), normalizedName);
+
+      // Persist role-specific signup selections immediately so dashboards show them on first load.
+      if (selectedRole === 'volunteer') {
+        const savedPrefs = await apiClient.updateUserPreferences({
+          preferredActivityTypes: selectedInterests,
+          availabilityDays: selectedAvailability,
+          volunteerTravelDistance: travelDistance,
+        });
+        if (!savedPrefs.success) {
+          toast.error('Account created, but failed to save volunteer preferences. Please review settings.')
+        }
+      }
+
+      if (selectedRole === 'elder') {
+        const savedPrefs = await apiClient.updateUserPreferences({
+          preferredActivityTypes: selectedInterests,
+          availabilityDays: preferredTime ? [preferredTime] : [],
+        });
+        if (!savedPrefs.success) {
+          toast.error('Account created, but failed to save companion preferences. Please review settings.')
+        }
+      }
 
       if (address.trim()) {
         updateUser({

@@ -85,11 +85,11 @@ export default function SettingsPage() {
 
   // Privacy settings state
   const [privacySettings, setPrivacySettings] = useState({
-    profileVisibility: 'connections',
+    profileVisibility: 'public',
     showLocation: true,
     showAge: true,
     allowMessages: true,
-    dataSharing: false,
+    dataSharing: true,
   })
 
   const tabs = [

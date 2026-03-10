@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import apiClient from '@/utils/api-client'
 
 export interface CompanionRequest {
@@ -16,16 +16,37 @@ export interface CompanionRequest {
   elder?: {
     id: string
     first_name: string
+    last_name?: string
     email: string
+    phone_number?: string
+    address_line_1?: string
+    city?: string
+    postcode?: string
   }
   volunteer?: {
     id: string
     first_name: string
     email: string
   }
+  completion?: {
+    elder_confirmed: boolean
+    volunteer_confirmed: boolean
+    waiting_for: 'ELDER' | 'VOLUNTEER' | null
+  }
+  matching?: {
+    score: number | null
+    activity_match: boolean | null
+    availability_match: boolean | null
+    elder_alignment: boolean | null
+  }
 }
 
-export const useCompanionRequests = () => {
+interface UseCompanionRequestsOptions {
+  enabled?: boolean
+}
+
+export const useCompanionRequests = (options: UseCompanionRequestsOptions = {}) => {
+  const { enabled = true } = options
   const [requests, setRequests] = useState<CompanionRequest[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -52,33 +73,36 @@ export const useCompanionRequests = () => {
   }, [requests])
 
   // Fetch all companion requests
-  const fetchRequests = async () => {
+  const fetchRequests = useCallback(async () => {
+    if (!enabled) {
+      setRequests([])
+      return
+    }
+
     setLoading(true)
     setError(null)
     try {
-      // In development with mock auth, return mock data
-      if (process.env.NEXT_PUBLIC_ENABLE_DEV_AUTH_MOCK === 'true') {
-        console.log('[DEV] Using mock companion requests')
-        setRequests([
-          {
-            id: '1',
-            elder_id: 'user-1',
-            volunteer_id: undefined,
-            activity_type: 'SHOPPING',
-            description: 'Need help with weekly groceries',
-            status: 'PENDING',
-            requested_date: new Date().toISOString(),
-            elder: { id: 'user-1', first_name: 'John', email: 'john@example.com' }
-          }
-        ])
-        return
-      }
-      
       const response = await apiClient.getCompanionRequests()
       if (response.success && response.data) {
         setRequests(Array.isArray(response.data) ? response.data : [])
       } else {
-        setError(response.error || 'Failed to fetch requests')
+        if (process.env.NEXT_PUBLIC_ENABLE_DEV_AUTH_MOCK === 'true') {
+          setRequests([
+            {
+              id: '1',
+              elder_id: 'user-1',
+              volunteer_id: undefined,
+              activity_type: 'SHOPPING',
+              description: 'Need help with weekly groceries',
+              status: 'PENDING',
+              requested_date: new Date().toISOString(),
+              elder: { id: 'user-1', first_name: 'John', email: 'john@example.com' }
+            }
+          ])
+          setError(null)
+        } else {
+          setError(response.error || 'Failed to fetch requests')
+        }
       }
     } catch (err) {
       console.error('Error fetching companion requests:', err)
@@ -86,7 +110,7 @@ export const useCompanionRequests = () => {
     } finally {
       setLoading(false)
     }
-  }
+  }, [enabled])
 
   // Create new companion request
   const createRequest = async (
@@ -149,12 +173,23 @@ export const useCompanionRequests = () => {
     setLoading(true)
     setError(null)
     try {
-      const response = await apiClient.acceptCompanionRequest(requestId)
-      if (response.success) {
-        // Update request in local state
+      if (process.env.NEXT_PUBLIC_ENABLE_DEV_AUTH_MOCK === 'true' && requestId === '1') {
         setRequests(
           requests.map((req) =>
             req.id === requestId ? { ...req, status: 'ACCEPTED' } : req
+          )
+        )
+        return true
+      }
+      const response = await apiClient.acceptCompanionRequest(requestId)
+      if (response.success) {
+        const updatedRequest = response.data as CompanionRequest | undefined
+        // Update request in local state
+        setRequests(
+          requests.map((req) =>
+            req.id === requestId
+              ? updatedRequest || { ...req, status: 'ACCEPTED' }
+              : req
           )
         )
         return true
@@ -171,9 +206,51 @@ export const useCompanionRequests = () => {
     }
   }
 
+  const completeRequest = async (requestId: string): Promise<boolean> => {
+    setLoading(true)
+    setError(null)
+    try {
+      if (process.env.NEXT_PUBLIC_ENABLE_DEV_AUTH_MOCK === 'true' && requestId === '1') {
+        setRequests(
+          requests.map((req) =>
+            req.id === requestId ? { ...req, status: 'COMPLETED' } : req
+          )
+        )
+        return true
+      }
+      const response = await apiClient.completeCompanionRequest(requestId)
+      if (response.success) {
+        const updatedRequest = response.data as CompanionRequest | undefined
+        setRequests(
+          requests.map((req) =>
+            req.id === requestId
+              ? updatedRequest || { ...req, status: 'COMPLETED' }
+              : req
+          )
+        )
+        return true
+      } else {
+        setError(response.error || 'Failed to complete request')
+        return false
+      }
+    } catch (err) {
+      console.error('Error completing companion request:', err)
+      setError('Failed to complete request')
+      return false
+    } finally {
+      setLoading(false)
+    }
+  }
+
   useEffect(() => {
+    if (!enabled) {
+      setRequests([])
+      setLoading(false)
+      setError(null)
+      return
+    }
     fetchRequests()
-  }, [])
+  }, [enabled, fetchRequests])
 
   // Get a single request by ID (for detail view)
   const getRequestDetail = (requestId: string): CompanionRequest | null => {
@@ -191,6 +268,7 @@ export const useCompanionRequests = () => {
     fetchRequests,
     createRequest,
     acceptRequest,
+    completeRequest,
     getRequestDetail
   }
 }

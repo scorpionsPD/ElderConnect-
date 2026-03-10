@@ -9,10 +9,22 @@ interface CreateHealthCheckinBody {
   notes?: string
 }
 
+interface HealthCheckinRow {
+  id: string
+  user_id: string
+  checkin_date: string
+  mood_level: number | null
+  energy_level: number | null
+  sleep_quality: number | null
+  medication_taken: boolean | null
+  notes: string | null
+  created_at: string
+}
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-User-Token, apikey',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-User-Token, X-User-Id, apikey',
 }
 
 serve(async (req: Request) => {
@@ -21,21 +33,27 @@ serve(async (req: Request) => {
     return new Response('ok', { headers: corsHeaders })
   }
 
-  // Get user ID from Authorization header
+  // Get user ID from Authorization header or fallback header
   const authHeader = req.headers.get('Authorization')
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return new Response(
-      JSON.stringify({ success: false, error: 'Unauthorized' }),
-      { status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
-    )
+  const userTokenHeader = req.headers.get('X-User-Token')
+  const userIdHeader = req.headers.get('X-User-Id')
+  let userId: string | null = null
+
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.substring(7)
+    userId = extractUserIdFromToken(token)
   }
 
-  const token = authHeader.substring(7)
-  const userId = extractUserIdFromToken(token)
+  if (!userId && userTokenHeader) {
+    userId = userTokenHeader
+  }
+  if (!userId && userIdHeader) {
+    userId = userIdHeader
+  }
 
   if (!userId) {
     return new Response(
-      JSON.stringify({ success: false, error: 'Invalid token' }),
+      JSON.stringify({ success: false, error: 'Unauthorized - valid token or X-User-Token is required' }),
       { status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
     )
   }
@@ -85,7 +103,7 @@ serve(async (req: Request) => {
       const { data: checkins, error } = await supabase
         .from('health_checkins')
         .select('*')
-        .eq('elder_id', userId)
+        .eq('user_id', userId)
         .order('checkin_date', { ascending: false })
         .range(offset, offset + limit - 1)
 
@@ -101,12 +119,14 @@ serve(async (req: Request) => {
       const { count } = await supabase
         .from('health_checkins')
         .select('id', { count: 'exact' })
-        .eq('elder_id', userId)
+        .eq('user_id', userId)
+
+      const normalizedCheckins = ((checkins || []) as HealthCheckinRow[]).map((row) => mapDbRowToApi(row))
 
       return new Response(
         JSON.stringify({
           success: true,
-          data: checkins || [],
+          data: normalizedCheckins,
           count: count || 0,
           limit,
           offset
@@ -169,15 +189,13 @@ serve(async (req: Request) => {
       const { data: newCheckin, error } = await supabase
         .from('health_checkins')
         .insert({
-          elder_id: userId,
-          mood: body.mood.toUpperCase(),
-          energy_level: body.energy_level,
-          sleep_hours: body.sleep_hours,
-          medications_taken: body.medications_taken,
+          user_id: userId,
+          mood_level: moodToMoodLevel(body.mood),
+          energy_level: normalizeEnergyLevel(body.energy_level),
+          sleep_quality: sleepHoursToQuality(body.sleep_hours),
+          medication_taken: body.medications_taken,
           notes: body.notes || null,
-          checkin_date: new Date().toISOString(),
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          checkin_date: new Date().toISOString()
         })
         .select('*')
         .single()
@@ -210,7 +228,7 @@ serve(async (req: Request) => {
         JSON.stringify({
           success: true,
           message: 'Health check-in submitted successfully',
-          data: newCheckin
+          data: mapDbRowToApi(newCheckin as HealthCheckinRow)
         }),
         { status: 201, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
       )
@@ -243,5 +261,68 @@ function extractUserIdFromToken(token: string): string | null {
     return payload.user_id || null
   } catch {
     return null
+  }
+}
+
+function moodToMoodLevel(mood: string): number {
+  const normalized = mood.toUpperCase()
+  if (normalized === 'HAPPY') return 5
+  if (normalized === 'GOOD') return 4
+  if (normalized === 'OKAY') return 3
+  if (normalized === 'SAD') return 2
+  return 1
+}
+
+function moodLevelToMood(moodLevel: number | null): string {
+  if (!moodLevel || moodLevel <= 1) return 'ANXIOUS'
+  if (moodLevel === 2) return 'SAD'
+  if (moodLevel === 3) return 'OKAY'
+  if (moodLevel === 4) return 'GOOD'
+  return 'HAPPY'
+}
+
+function normalizeEnergyLevel(level: number): number {
+  if (level <= 2) return 1
+  if (level <= 4) return 2
+  if (level <= 6) return 3
+  if (level <= 8) return 4
+  return 5
+}
+
+function denormalizeEnergyLevel(level: number | null): number {
+  if (!level || level <= 1) return 2
+  if (level === 2) return 4
+  if (level === 3) return 6
+  if (level === 4) return 8
+  return 10
+}
+
+function sleepHoursToQuality(hours: number): number {
+  if (hours >= 8) return 5
+  if (hours >= 7) return 4
+  if (hours >= 6) return 3
+  if (hours >= 5) return 2
+  return 1
+}
+
+function sleepQualityToHours(quality: number | null): number {
+  if (!quality || quality <= 1) return 4
+  if (quality === 2) return 5
+  if (quality === 3) return 6
+  if (quality === 4) return 7
+  return 8
+}
+
+function mapDbRowToApi(row: HealthCheckinRow) {
+  return {
+    id: row.id,
+    user_id: row.user_id,
+    mood: moodLevelToMood(row.mood_level),
+    energy_level: denormalizeEnergyLevel(row.energy_level),
+    sleep_hours: sleepQualityToHours(row.sleep_quality),
+    medications_taken: Boolean(row.medication_taken),
+    notes: row.notes || '',
+    checkin_date: row.checkin_date,
+    created_at: row.created_at
   }
 }

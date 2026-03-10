@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import apiClient from '@/utils/api-client'
 
@@ -19,9 +19,9 @@ export interface UserPreferences {
   emergencyContactsSetup?: boolean
   
   // Volunteer-specific preferences
-  maxCompanionshipHoursPerWeek?: number
   preferredActivityTypes?: string[]
   availabilityDays?: string[]
+  volunteerTravelDistance?: string
   
   // Family-specific preferences
   notifyOnElderActivity?: boolean
@@ -43,6 +43,11 @@ export const usePreferences = () => {
     accessibilityHighContrast: false,
     accessibilityVoiceEnabled: false,
     preferredLanguage: 'en',
+    preferredActivityTypes: [],
+    availabilityDays: [],
+    volunteerTravelDistance: '',
+    notifyOnElderActivity: true,
+    shareMedicationReminders: true,
     dataSharingConsent: true,
     marketingEmails: false,
     twoFactorEnabled: false
@@ -51,21 +56,41 @@ export const usePreferences = () => {
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
 
+  const getStorageKey = useCallback(() => `user_preferences_${user?.id || 'anonymous'}`, [user?.id])
+  const loadLocalPreferences = useCallback((): Partial<UserPreferences> | null => {
+    if (typeof window === 'undefined') return null
+    const stored = localStorage.getItem(getStorageKey())
+    if (!stored) return null
+    try {
+      return JSON.parse(stored)
+    } catch {
+      return null
+    }
+  }, [getStorageKey])
+  const saveLocalPreferences = useCallback((next: Partial<UserPreferences>) => {
+    if (typeof window === 'undefined') return
+    localStorage.setItem(getStorageKey(), JSON.stringify(next))
+  }, [getStorageKey])
+
   // Load preferences from backend
-  const loadPreferences = async () => {
+  const loadPreferences = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
+      const localPrefs = loadLocalPreferences()
+      if (localPrefs) {
+        setPreferences(prev => ({ ...prev, ...localPrefs }))
+      }
+
       // Try to fetch preferences from backend
-      const response = await apiClient.request('/user-preferences', {
-        method: 'GET'
-      })
+      const response = await apiClient.getUserPreferences()
 
       if (response.success && response.data) {
-        setPreferences(prev => ({
-          ...prev,
-          ...response.data
-        }))
+        setPreferences(prev => {
+          const mergedPrefs = { ...prev, ...response.data }
+          saveLocalPreferences(mergedPrefs)
+          return mergedPrefs
+        })
       }
     } catch (err) {
       console.error('Error loading preferences:', err)
@@ -73,7 +98,7 @@ export const usePreferences = () => {
     } finally {
       setLoading(false)
     }
-  }
+  }, [loadLocalPreferences, saveLocalPreferences])
 
   // Save preferences to backend
   const savePreferences = async (updates: Partial<UserPreferences>): Promise<boolean> => {
@@ -85,12 +110,10 @@ export const usePreferences = () => {
       // Update local state first
       const newPreferences = { ...preferences, ...updates }
       setPreferences(newPreferences)
+      saveLocalPreferences(newPreferences)
 
       // Save to backend
-      const response = await apiClient.request('/user-preferences', {
-        method: 'PUT',
-        body: JSON.stringify(updates)
-      })
+      const response = await apiClient.updateUserPreferences(updates)
 
       if (response.success) {
         setSaved(true)
@@ -103,7 +126,7 @@ export const usePreferences = () => {
       }
     } catch (err) {
       console.error('Error saving preferences:', err)
-      setError('Failed to save preferences')
+      setError(err instanceof Error ? err.message : 'Failed to save preferences')
       return false
     } finally {
       setLoading(false)
@@ -156,7 +179,7 @@ export const usePreferences = () => {
 
   useEffect(() => {
     loadPreferences()
-  }, [user?.id])
+  }, [loadPreferences])
 
   return {
     preferences,

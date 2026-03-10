@@ -33,9 +33,14 @@ export interface DashboardStats {
 
 export const useStats = () => {
   const { user } = useAuth()
-  const { requests } = useCompanionRequests()
-  const { checkins } = useHealthCheckins()
-  const { elders } = useElders()
+  const role = user?.role?.toLowerCase()
+  const isElder = role === 'elder'
+  const isVolunteer = role === 'volunteer'
+  const isFamily = role === 'family'
+
+  const { requests } = useCompanionRequests({ enabled: isElder || isVolunteer })
+  const { checkins } = useHealthCheckins({ enabled: isElder })
+  const { elders } = useElders({ enabled: isFamily })
   const [stats, setStats] = useState<DashboardStats>({
     companionRequestsPending: 0,
     companionRequestsAccepted: 0,
@@ -114,7 +119,7 @@ export const useStats = () => {
         consecutiveDaysCheckin: consecutive,
         eldersConnected: elderCount,
         activitiesThisMonth: thisMonth,
-        emergencyContactsSetup: !!user?.profile_picture_url // Placeholder - would be real field
+        emergencyContactsSetup: !!(user?.emergency_contact_name && user?.emergency_contact_phone)
       }))
     }
 

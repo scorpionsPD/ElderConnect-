@@ -15,7 +15,7 @@ interface ApiResponse<T = any> {
 class ApiClient {
   private baseURL: string
   private token: string | null = null
-  public userId: string | null = null  // Made public so it can be set directly after signup
+  private userId: string | null = null
 
   constructor(baseURL: string = API_BASE_URL) {
     this.baseURL = baseURL
@@ -28,6 +28,7 @@ class ApiClient {
   private loadToken(): void {
     if (typeof window !== 'undefined') {
       this.token = localStorage.getItem('auth_token')
+      this.userId = localStorage.getItem('user_id')
     }
   }
 
@@ -40,7 +41,7 @@ class ApiClient {
     try {
       const parts = token.split('.')
       if (parts.length === 3) {
-        const payload = JSON.parse(atob(parts[1]))
+        const payload = JSON.parse(this.decodeBase64Url(parts[1]))
         this.userId = payload.user_id || payload.sub || null
       }
     } catch (e) {
@@ -48,7 +49,68 @@ class ApiClient {
     }
     if (typeof window !== 'undefined') {
       localStorage.setItem('auth_token', token)
+      if (this.userId) {
+        localStorage.setItem('user_id', this.userId)
+      }
     }
+  }
+
+  setUserId(userId: string | null): void {
+    this.userId = userId
+    if (typeof window !== 'undefined') {
+      if (userId) {
+        localStorage.setItem('user_id', userId)
+      } else {
+        localStorage.removeItem('user_id')
+      }
+    }
+  }
+
+  private decodeBase64Url(value: string): string {
+    // JWT segments are base64url; normalize for atob.
+    const normalized = value.replace(/-/g, '+').replace(/_/g, '/')
+    const padding = normalized.length % 4 === 0 ? '' : '='.repeat(4 - (normalized.length % 4))
+    return atob(`${normalized}${padding}`)
+  }
+
+  private getEffectiveUserId(): string | null {
+    if (this.userId) return this.userId
+    if (typeof window === 'undefined') return null
+
+    const storedUserId = localStorage.getItem('user_id')
+    if (storedUserId) {
+      this.userId = storedUserId
+      return storedUserId
+    }
+
+    const savedUserData = localStorage.getItem('user_data')
+    if (!savedUserData) return null
+
+    try {
+      const parsed = JSON.parse(savedUserData)
+      const id = typeof parsed?.id === 'string' ? parsed.id : null
+      if (id) {
+        this.userId = id
+        localStorage.setItem('user_id', id)
+      }
+      return id
+    } catch {
+      return null
+    }
+  }
+
+  private attachUserIdentityHeaders(headers: HeadersInit): HeadersInit {
+    const effectiveUserId = this.getEffectiveUserId()
+    if (!effectiveUserId) return headers
+    const mutableHeaders: Record<string, string> =
+      headers instanceof Headers
+        ? Object.fromEntries(headers.entries())
+        : Array.isArray(headers)
+          ? Object.fromEntries(headers)
+          : { ...(headers as Record<string, string>) }
+    mutableHeaders['X-User-Token'] = effectiveUserId
+    mutableHeaders['X-User-Id'] = effectiveUserId
+    return mutableHeaders
   }
 
   /**
@@ -59,6 +121,7 @@ class ApiClient {
     this.userId = null
     if (typeof window !== 'undefined') {
       localStorage.removeItem('auth_token')
+      localStorage.removeItem('user_id')
     }
   }
 
@@ -71,16 +134,12 @@ class ApiClient {
     }
 
     const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    
-    // Always include Authorization header (required by Supabase Edge Functions)
-    if (anonKey) {
-      if (this.token) {
-        // Use user token if available
-        headers['Authorization'] = `Bearer ${this.token}`
-      } else {
-        // Fallback to anon key
-        headers['Authorization'] = `Bearer ${anonKey}`
-      }
+
+    // Edge Functions are protected by Supabase JWT verification.
+    // Use anon key for Authorization; app-specific identity is sent via X-User-Token.
+    if (includeAuth && anonKey) {
+      headers['Authorization'] = `Bearer ${anonKey}`
+      headers['apikey'] = anonKey
     }
 
     return headers
@@ -94,9 +153,7 @@ class ApiClient {
     options: RequestInit = {}
   ): Promise<ApiResponse<T>> {
     const url = `${this.baseURL}${endpoint}`
-    const includeAuth = options.headers && 'Authorization' in options.headers
-      ? false
-      : !endpoint.includes('/auth/')
+    const includeAuth = !(options.headers && 'Authorization' in options.headers)
 
     const requestInit: RequestInit = {
       ...options,
@@ -123,7 +180,17 @@ class ApiClient {
         }
       }
 
-      return payload as ApiResponse<T>
+      const normalizedData =
+        payload && typeof payload === 'object' && 'data' in payload
+          ? payload.data
+          : payload
+
+      return {
+        success: payload?.success ?? true,
+        data: normalizedData,
+        message: payload?.message,
+        error: payload?.error
+      } as ApiResponse<T>
     } catch (error) {
       return {
         success: false,
@@ -205,6 +272,7 @@ class ApiClient {
   async sendOTP(email?: string, phone_number?: string): Promise<ApiResponse> {
     return this.request('/send-otp', {
       method: 'POST',
+      headers: this.getServiceHeaders(),
       body: JSON.stringify({
         email,
         phone_number
@@ -218,6 +286,7 @@ class ApiClient {
   async verifyOTP(code: string, email?: string, phone_number?: string): Promise<ApiResponse> {
     return this.request('/verify-otp', {
       method: 'POST',
+      headers: this.getServiceHeaders(),
       body: JSON.stringify({
         code,
         email,
@@ -246,6 +315,7 @@ class ApiClient {
 
     const response = await this.request('/signup', {
       method: 'POST',
+      headers: this.getServiceHeaders(),
       body: JSON.stringify(signupPayload)
     })
 
@@ -261,6 +331,7 @@ class ApiClient {
 
     return this.request('/signup', {
       method: 'POST',
+      headers: this.getServiceHeaders(),
       body: JSON.stringify({
         ...signupPayload,
         last_name: inferredLastName || first_name
@@ -276,10 +347,7 @@ class ApiClient {
    * Get current user profile
    */
   async getProfile(): Promise<ApiResponse> {
-    const headers: HeadersInit = {}
-    if (this.userId) {
-      headers['X-User-Id'] = this.userId
-    }
+    const headers: HeadersInit = this.attachUserIdentityHeaders(this.getServiceHeaders())
     return this.request('/get-profile', {
       method: 'GET',
       headers
@@ -290,10 +358,7 @@ class ApiClient {
    * Update user profile
    */
   async updateProfile(updates: Record<string, any>): Promise<ApiResponse> {
-    const headers: HeadersInit = {}
-    if (this.userId) {
-      headers['X-User-Id'] = this.userId
-    }
+    const headers: HeadersInit = this.attachUserIdentityHeaders(this.getServiceHeaders())
     return this.request('/get-profile', {
       method: 'PUT',
       headers,
@@ -309,8 +374,10 @@ class ApiClient {
    * List companion requests
    */
   async getCompanionRequests(): Promise<ApiResponse> {
+    const headers: HeadersInit = this.attachUserIdentityHeaders(this.getServiceHeaders())
     return this.request('/companion-requests', {
-      method: 'GET'
+      method: 'GET',
+      headers
     })
   }
 
@@ -325,8 +392,10 @@ class ApiClient {
     location_latitude?: number,
     location_longitude?: number
   ): Promise<ApiResponse> {
+    const headers: HeadersInit = this.attachUserIdentityHeaders(this.getServiceHeaders())
     return this.request('/companion-requests', {
       method: 'POST',
+      headers,
       body: JSON.stringify({
         activity_type,
         description,
@@ -338,12 +407,137 @@ class ApiClient {
     })
   }
 
+  // ============================================================================
+  // FAMILY CONNECTION APIs
+  // ============================================================================
+
+  async getFamilyElders(): Promise<ApiResponse> {
+    const headers: HeadersInit = this.attachUserIdentityHeaders(this.getServiceHeaders())
+    return this.request('/family-elders', {
+      method: 'GET',
+      headers
+    })
+  }
+
+  async addFamilyElder(elderEmail: string, relationship: string): Promise<ApiResponse> {
+    const headers: HeadersInit = this.attachUserIdentityHeaders(this.getServiceHeaders())
+    return this.request('/family-elders', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        elder_email: elderEmail,
+        relationship
+      })
+    })
+  }
+
+  async updateFamilyElder(connectionId: string, relationship: string): Promise<ApiResponse> {
+    const headers: HeadersInit = this.attachUserIdentityHeaders(this.getServiceHeaders())
+    return this.request(`/family-elders/${connectionId}`, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify({ relationship })
+    })
+  }
+
+  async removeFamilyElder(connectionId: string): Promise<ApiResponse> {
+    const headers: HeadersInit = this.attachUserIdentityHeaders(this.getServiceHeaders())
+    return this.request(`/family-elders/${connectionId}`, {
+      method: 'DELETE',
+      headers
+    })
+  }
+
+  async getElderFamilyMembers(): Promise<ApiResponse> {
+    const headers: HeadersInit = this.attachUserIdentityHeaders(this.getServiceHeaders())
+    return this.request('/elder-family-members', {
+      method: 'GET',
+      headers
+    })
+  }
+
+  async addElderFamilyMember(
+    familyEmail: string,
+    relationship: string,
+    accessLevel: string = 'VIEW_ALL'
+  ): Promise<ApiResponse> {
+    const headers: HeadersInit = this.attachUserIdentityHeaders(this.getServiceHeaders())
+    return this.request('/elder-family-members', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        family_email: familyEmail,
+        relationship,
+        access_level: accessLevel
+      })
+    })
+  }
+
+  async updateElderFamilyMember(
+    connectionId: string,
+    updates: { relationship?: string; access_level?: string }
+  ): Promise<ApiResponse> {
+    const headers: HeadersInit = this.attachUserIdentityHeaders(this.getServiceHeaders())
+    return this.request(`/elder-family-members/${connectionId}`, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify(updates)
+    })
+  }
+
+  async removeElderFamilyMember(connectionId: string): Promise<ApiResponse> {
+    const headers: HeadersInit = this.attachUserIdentityHeaders(this.getServiceHeaders())
+    return this.request(`/elder-family-members/${connectionId}`, {
+      method: 'DELETE',
+      headers
+    })
+  }
+
+  async getCompanionMessages(requestId: string): Promise<ApiResponse> {
+    const headers: HeadersInit = this.attachUserIdentityHeaders(this.getServiceHeaders())
+    return this.request(`/companion-messages?request_id=${encodeURIComponent(requestId)}`, {
+      method: 'GET',
+      headers
+    })
+  }
+
+  async sendCompanionMessage(requestId: string, messageText: string): Promise<ApiResponse> {
+    const headers: HeadersInit = this.attachUserIdentityHeaders(this.getServiceHeaders())
+    return this.request(`/companion-messages?request_id=${encodeURIComponent(requestId)}`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        message_text: messageText
+      })
+    })
+  }
+
+  private getServiceHeaders(): HeadersInit {
+    const headers: HeadersInit = {}
+    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    if (anonKey) {
+      headers['Authorization'] = `Bearer ${anonKey}`
+      headers['apikey'] = anonKey
+    }
+    return headers
+  }
+
   /**
    * Accept companion request (for volunteers)
    */
   async acceptCompanionRequest(requestId: string): Promise<ApiResponse> {
+    const headers: HeadersInit = this.attachUserIdentityHeaders(this.getServiceHeaders())
     return this.request(`/companion-requests/${requestId}/accept`, {
-      method: 'POST'
+      method: 'POST',
+      headers
+    })
+  }
+
+  async completeCompanionRequest(requestId: string): Promise<ApiResponse> {
+    const headers: HeadersInit = this.attachUserIdentityHeaders(this.getServiceHeaders())
+    return this.request(`/companion-requests/${requestId}/complete`, {
+      method: 'POST',
+      headers
     })
   }
 
@@ -355,8 +549,10 @@ class ApiClient {
    * Get health check-ins for user
    */
   async getHealthCheckins(limit: number = 30, offset: number = 0): Promise<ApiResponse> {
+    const headers: HeadersInit = this.attachUserIdentityHeaders(this.getServiceHeaders())
     return this.request(`/health-checkins?limit=${limit}&offset=${offset}`, {
-      method: 'GET'
+      method: 'GET',
+      headers
     })
   }
 
@@ -370,8 +566,10 @@ class ApiClient {
     medications_taken: boolean,
     notes?: string
   ): Promise<ApiResponse> {
+    const headers: HeadersInit = this.attachUserIdentityHeaders(this.getServiceHeaders())
     return this.request('/health-checkins', {
       method: 'POST',
+      headers,
       body: JSON.stringify({
         mood,
         energy_level,
@@ -379,6 +577,29 @@ class ApiClient {
         medications_taken,
         notes
       })
+    })
+  }
+
+  /**
+   * Get current user's preferences
+   */
+  async getUserPreferences(): Promise<ApiResponse> {
+    const headers: HeadersInit = this.attachUserIdentityHeaders(this.getServiceHeaders())
+    return this.request('/user-preferences', {
+      method: 'GET',
+      headers
+    })
+  }
+
+  /**
+   * Update current user's preferences
+   */
+  async updateUserPreferences(updates: Record<string, any>): Promise<ApiResponse> {
+    const headers: HeadersInit = this.attachUserIdentityHeaders(this.getServiceHeaders())
+    return this.request('/user-preferences', {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify(updates)
     })
   }
 }

@@ -3,13 +3,18 @@ import { supabaseAdmin } from '@/utils/supabase'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { id } = req.query
+  const userId = Array.isArray(id) ? id[0] : id
+
+  if (!userId) {
+    return res.status(400).json({ message: 'Missing user id' })
+  }
 
   if (req.method === 'GET') {
     try {
       const { data, error } = await supabaseAdmin
         .from('users')
         .select('*')
-        .eq('id', id)
+        .eq('id', userId)
         .single()
 
       if (error) throw error
@@ -25,7 +30,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const { data, error } = await supabaseAdmin
         .from('users')
         .update({ verification_status })
-        .eq('id', id)
+        .eq('id', userId)
         .select()
         .single()
 
@@ -37,7 +42,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   } else if (req.method === 'DELETE') {
     try {
-      const { error } = await supabaseAdmin.from('users').delete().eq('id', id)
+      const { error } = await supabaseAdmin.from('users').delete().eq('id', userId)
 
       if (error) throw error
 

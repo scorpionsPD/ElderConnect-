@@ -7,6 +7,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const { id } = req.query
+  const verificationId = Array.isArray(id) ? id[0] : id
+  if (!verificationId) {
+    return res.status(400).json({ message: 'Missing verification id' })
+  }
   const { status, rejection_reason } = req.body
 
   try {
@@ -18,7 +22,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         reviewed_at: new Date().toISOString(),
         rejection_reason: status === 'rejected' ? rejection_reason : null,
       })
-      .eq('id', id)
+      .eq('id', verificationId)
       .select()
       .single()
 

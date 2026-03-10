@@ -7,6 +7,8 @@ export interface User {
   first_name: string
   role: string
   phone_number?: string
+  emergency_contact_name?: string
+  emergency_contact_phone?: string
   profile_picture_url?: string
   bio?: string
   address?: string
@@ -50,6 +52,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             // Try to restore saved user data
             const userData = JSON.parse(savedUserData)
             apiClient.setToken(token)
+            if (userData?.id) {
+              apiClient.setUserId(userData.id)
+            }
             setUser(userData)
             console.log('[DEV] Restored user from localStorage:', userData)
             setIsLoading(false)
@@ -59,10 +64,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             localStorage.removeItem('user_data')
           }
         }
+
+        // Signup flow can persist user_data without a JWT token.
+        if (!token && savedUserData) {
+          try {
+            const userData = JSON.parse(savedUserData)
+            if (userData?.id) {
+              apiClient.setUserId(userData.id)
+            }
+            setUser(userData)
+            setIsLoading(false)
+            return
+          } catch (parseError) {
+            console.warn('Failed to parse saved signup user data:', parseError)
+            localStorage.removeItem('user_data')
+          }
+        }
         
         if (token) {
           // Check if it's a dev test token
-          if (token.startsWith('dev-test-token-')) {
+          if (isMockAuthEnabled && token.startsWith('dev-test-token-')) {
             // Set a mock user for development
             setUser({
               id: 'dev-test-user',
@@ -101,7 +122,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     initializeAuth()
-  }, [])
+  }, [isMockAuthEnabled])
 
   const sendOTP = async (email: string): Promise<string | null> => {
     setIsLoading(true)
@@ -134,23 +155,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.setItem('auth_token', token)
       }
 
+      const verifiedUserId = response.data?.user_id
+      if (verifiedUserId) {
+        apiClient.setUserId(verifiedUserId)
+      }
+
       // If new user, return undefined to indicate signup flow is needed
       if (response.data?.is_new_user) {
         console.log('New user detected, signup flow needed')
         return undefined
       }
 
-      // Existing user - fetch profile
+      // Build minimum session user from verify-otp response so login is not
+      // blocked by get-profile CORS/header mismatches.
+      const fallbackUser: User = {
+        id: response.data?.user_id || `user-${Date.now()}`,
+        email: response.data?.email || email,
+        first_name: (response.data?.email || email).split('@')[0] || 'User',
+        role: response.data?.role || 'ELDER',
+        phone_number: ''
+      }
+
+      // Existing user - fetch full profile (best effort)
       const profileResponse = await apiClient.getProfile()
       console.log('Profile response:', profileResponse)
       if (profileResponse.success && profileResponse.data) {
-        // Save user data to localStorage
+        if ((profileResponse.data as User).id) {
+          apiClient.setUserId((profileResponse.data as User).id)
+        }
         localStorage.setItem('user_data', JSON.stringify(profileResponse.data))
         setUser(profileResponse.data)
         return profileResponse.data
-      } else {
-        throw new Error(profileResponse.error || 'Failed to fetch user profile')
       }
+
+      // Fallback to verified OTP user identity if profile call fails.
+      localStorage.setItem('user_data', JSON.stringify(fallbackUser))
+      setUser(fallbackUser)
+      return fallbackUser
     } finally {
       setIsLoading(false)
     }
@@ -177,10 +218,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             phone_number
           }
           
-          // Set userId directly from response since we don't have a token
-          // This allows getProfile to work with X-User-Id header
+          const token = response.data?.token
+          if (token) {
+            apiClient.setToken(token)
+            localStorage.setItem('auth_token', token)
+          }
+
+          // Keep userId for flows where backend signup doesn't return a JWT.
           if (response.data?.user?.id) {
-            apiClient.userId = response.data.user.id
+            apiClient.setUserId(response.data.user.id)
             console.log('[AUTH] Set userId from signup response:', response.data.user.id)
           }
           

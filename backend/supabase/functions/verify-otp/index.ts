@@ -21,7 +21,7 @@ interface VerifyOTPResponse {
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-User-Token, apikey',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-User-Token, X-User-Id, apikey',
 }
 
 serve(async (req: Request) => {
@@ -81,9 +81,11 @@ serve(async (req: Request) => {
 
     const supabase = createClient(supabaseUrl, supabaseKey)
 
-    // Development mode: Accept any 4-digit code for testing
-    // This is the default since ENVIRONMENT env var is typically not set
-    const isDevelopment = code.match(/^\d{4}$/)
+    // Development bypass: only enabled when explicitly configured.
+    // Never infer development mode from OTP format.
+    const runtimeEnv = (Deno.env.get('ENVIRONMENT') || Deno.env.get('NODE_ENV') || 'production').toLowerCase()
+    const allowDevOtpBypass = (Deno.env.get('ALLOW_DEV_OTP_BYPASS') || 'false').toLowerCase() === 'true'
+    const isDevelopment = runtimeEnv !== 'production' && allowDevOtpBypass
     
     if (isDevelopment) {
       console.log(`[DEV] Accepting OTP ${code} for ${email || phone_number}`)

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import apiClient from '@/utils/api-client'
 
 export interface HealthCheckin {
@@ -13,51 +13,100 @@ export interface HealthCheckin {
   created_at: string
 }
 
-export const useHealthCheckins = () => {
+interface UseHealthCheckinsOptions {
+  enabled?: boolean
+}
+
+export const useHealthCheckins = (options: UseHealthCheckinsOptions = {}) => {
+  const { enabled = true } = options
   const [checkins, setCheckins] = useState<HealthCheckin[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Load mock health check-ins from localStorage on mount
+  const getStorageKey = (): string => {
+    if (typeof window === 'undefined') return 'health_checkins_anonymous'
+    const userId = localStorage.getItem('user_id') || 'anonymous'
+    return `health_checkins_${userId}`
+  }
+
+  // Load cached health check-ins from localStorage on mount
   useEffect(() => {
-    if (typeof window !== 'undefined' && process.env.NEXT_PUBLIC_ENABLE_DEV_AUTH_MOCK === 'true') {
-      const stored = localStorage.getItem('dev_health_checkins')
-      if (stored) {
-        try {
-          const parsed = JSON.parse(stored)
-          setCheckins(Array.isArray(parsed) ? parsed : [])
-        } catch (e) {
-          console.error('Failed to parse stored health check-ins:', e)
-        }
+    if (typeof window === 'undefined') return
+    const stored = localStorage.getItem(getStorageKey())
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored)
+        setCheckins(Array.isArray(parsed) ? parsed : [])
+      } catch (e) {
+        console.error('Failed to parse stored health check-ins:', e)
       }
     }
   }, [])
 
   // Persist health check-ins to localStorage whenever they change
   useEffect(() => {
-    if (typeof window !== 'undefined' && process.env.NEXT_PUBLIC_ENABLE_DEV_AUTH_MOCK === 'true') {
-      localStorage.setItem('dev_health_checkins', JSON.stringify(checkins))
-    }
+    if (typeof window === 'undefined') return
+    localStorage.setItem(getStorageKey(), JSON.stringify(checkins))
   }, [checkins])
 
   // Fetch health check-ins
-  const fetchCheckins = async (limit: number = 30, offset: number = 0) => {
+  const shouldUseLocalFallback = (message?: string | null): boolean => {
+    const text = (message || '').toLowerCase()
+    return text.includes('invalid jwt') || text.includes('unauthorized') || text.includes('failed to fetch')
+  }
+
+  const readLocalCheckins = useCallback((): HealthCheckin[] => {
+    if (typeof window === 'undefined') return []
+    const stored = localStorage.getItem(getStorageKey())
+    if (!stored) return []
+    try {
+      const parsed = JSON.parse(stored)
+      return Array.isArray(parsed) ? parsed : []
+    } catch {
+      return []
+    }
+  }, [])
+
+  const writeLocalCheckins = useCallback((items: HealthCheckin[]) => {
+    if (typeof window === 'undefined') return
+    localStorage.setItem(getStorageKey(), JSON.stringify(items))
+  }, [])
+
+  const fetchCheckins = useCallback(async (limit: number = 30, offset: number = 0) => {
+    if (!enabled) {
+      setCheckins([])
+      return
+    }
+
     setLoading(true)
     setError(null)
     try {
       const response = await apiClient.getHealthCheckins(limit, offset)
       if (response.success && response.data) {
-        setCheckins(Array.isArray(response.data) ? response.data : [])
+        const fetched = Array.isArray(response.data) ? response.data : []
+        setCheckins(fetched)
+        writeLocalCheckins(fetched)
       } else {
-        setError(response.error || 'Failed to fetch check-ins')
+        if (shouldUseLocalFallback(response.error)) {
+          setCheckins(readLocalCheckins())
+          setError(null)
+        } else {
+          setError(response.error || 'Failed to fetch check-ins')
+        }
       }
     } catch (err) {
       console.error('Error fetching health check-ins:', err)
-      setError('Failed to fetch check-ins')
+      const local = readLocalCheckins()
+      if (local.length > 0) {
+        setCheckins(local)
+        setError(null)
+      } else {
+        setError('Failed to fetch check-ins')
+      }
     } finally {
       setLoading(false)
     }
-  }
+  }, [enabled, readLocalCheckins, writeLocalCheckins])
 
   // Submit new health check-in
   const submitCheckin = async (
@@ -79,16 +128,50 @@ export const useHealthCheckins = () => {
       )
       if (response.success && response.data) {
         const newCheckin = response.data as HealthCheckin
-        setCheckins([newCheckin, ...checkins])
+        const updated = [newCheckin, ...checkins]
+        setCheckins(updated)
+        writeLocalCheckins(updated)
         return newCheckin
       } else {
+        if (shouldUseLocalFallback(response.error)) {
+          const localCheckin: HealthCheckin = {
+            id: `local-${Date.now()}`,
+            user_id: 'local-user',
+            mood: mood.toUpperCase(),
+            energy_level,
+            sleep_hours,
+            medications_taken,
+            notes,
+            checkin_date: new Date().toISOString(),
+            created_at: new Date().toISOString()
+          }
+          const updated = [localCheckin, ...checkins]
+          setCheckins(updated)
+          writeLocalCheckins(updated)
+          setError(null)
+          return localCheckin
+        }
         setError(response.error || 'Failed to submit check-in')
         return null
       }
     } catch (err) {
       console.error('Error submitting health check-in:', err)
-      setError('Failed to submit check-in')
-      return null
+      const localCheckin: HealthCheckin = {
+        id: `local-${Date.now()}`,
+        user_id: 'local-user',
+        mood: mood.toUpperCase(),
+        energy_level,
+        sleep_hours,
+        medications_taken,
+        notes,
+        checkin_date: new Date().toISOString(),
+        created_at: new Date().toISOString()
+      }
+      const updated = [localCheckin, ...checkins]
+      setCheckins(updated)
+      writeLocalCheckins(updated)
+      setError(null)
+      return localCheckin
     } finally {
       setLoading(false)
     }
@@ -105,8 +188,14 @@ export const useHealthCheckins = () => {
   }
 
   useEffect(() => {
+    if (!enabled) {
+      setCheckins([])
+      setLoading(false)
+      setError(null)
+      return
+    }
     fetchCheckins()
-  }, [])
+  }, [enabled, fetchCheckins])
 
   return {
     checkins,

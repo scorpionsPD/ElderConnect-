@@ -45,7 +45,7 @@ interface UpdateProfileRequest {
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-User-Token, apikey',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-User-Token, X-User-Id, apikey',
 }
 
 serve(async (req: Request) => {
@@ -148,8 +148,12 @@ serve(async (req: Request) => {
       if (body.address_line_2) updateData.address_line_2 = body.address_line_2
       if (body.city) updateData.city = body.city
       if (body.postcode) updateData.postcode = body.postcode
-      if (body.emergency_contact_name) updateData.emergency_contact_name = body.emergency_contact_name
-      if (body.emergency_contact_phone) updateData.emergency_contact_phone = body.emergency_contact_phone
+      if ('emergency_contact_name' in body) {
+        updateData.emergency_contact_name = body.emergency_contact_name?.trim() || null
+      }
+      if ('emergency_contact_phone' in body) {
+        updateData.emergency_contact_phone = body.emergency_contact_phone?.trim() || null
+      }
       if (body.profile_picture_url) updateData.profile_picture_url = body.profile_picture_url
       if (body.accessibility_large_fonts !== undefined) updateData.accessibility_large_fonts = body.accessibility_large_fonts
       if (body.accessibility_high_contrast !== undefined) updateData.accessibility_high_contrast = body.accessibility_high_contrast

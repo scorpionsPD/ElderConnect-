@@ -14,6 +14,7 @@ import Badge from '@/components/Badge'
 import Button from '@/components/Button'
 import { useStats } from '@/hooks/useStats'
 import { useElders } from '@/hooks/useElders'
+import { useCompanionRequests } from '@/hooks/useCompanionRequests'
 import { usePreferences } from '@/hooks/usePreferences'
 import {
   Heart,
@@ -29,45 +30,42 @@ import {
   Shield,
   AlertCircle,
   Plus,
-  LogOut,
   Upload,
 } from 'lucide-react'
 import { useRef } from 'react'
 
 type TabType = 'overview' | 'elders' | 'activities' | 'messages' | 'settings'
 
-const PLACEHOLDER_FAMILY = {
-  id: 'fam-001',
-  email: 'family@elderconnect.dev',
-  first_name: 'Family',
+const EMPTY_FAMILY_PROFILE = {
+  id: '',
+  email: '',
+  first_name: '',
   role: 'FAMILY',
   phone_number: '',
-  profile_picture_url: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop',
-}
-
-const PLACEHOLDER_STATS = {
-  eldersConnected: 0,
-  recentActivities: 0,
-  upcomingVisits: 0,
+  profile_picture_url: '',
 }
 
 export default function FamilyDashboard() {
   const router = useRouter()
-  const { user, logout } = useAuth()
+  const { user } = useAuth()
   const toast = useToast()
   
   // Hooks for data
   const stats = useStats()
-  const { elders, addElder, removeElder } = useElders()
-  const { preferences, updateNotifications, updateAccessibility, updatePrivacy, saved } = usePreferences()
+  const { elders, addElder, removeElder, updateElder, loading: eldersLoading, error: eldersError } = useElders()
+  const { requests, loading: requestsLoading } = useCompanionRequests()
+  const { preferences, updateNotifications, updateAccessibility, updatePrivacy, updateRolePreferences, saved } = usePreferences()
   
   const [activeTab, setActiveTab] = useState<TabType>('overview')
   const [loading, setLoading] = useState(true)
-  const [profileData, setProfileData] = useState(user || PLACEHOLDER_FAMILY)
+  const [profileData, setProfileData] = useState(user || EMPTY_FAMILY_PROFILE)
   const [avatarPreview, setAvatarPreview] = useState(user?.profile_picture_url || '')
   const [showAddElderModal, setShowAddElderModal] = useState(false)
   const [newElderEmail, setNewElderEmail] = useState('')
   const [newElderRelationship, setNewElderRelationship] = useState('Parent')
+  const [editingConnectionId, setEditingConnectionId] = useState<string | null>(null)
+  const [editingRelationship, setEditingRelationship] = useState('Parent')
+  const [savingRelationship, setSavingRelationship] = useState(false)
   const avatarInputRef = useRef<HTMLInputElement>(null)
 
   const handleAddElder = async () => {
@@ -98,6 +96,32 @@ export default function FamilyDashboard() {
     toast.error('Failed to remove elder')
   }
 
+  const beginEditRelationship = (connectionId: string, relationship: string) => {
+    setEditingConnectionId(connectionId)
+    setEditingRelationship(relationship || 'Other')
+  }
+
+  const cancelEditRelationship = () => {
+    setEditingConnectionId(null)
+    setEditingRelationship('Parent')
+  }
+
+  const handleSaveRelationship = async () => {
+    if (!editingConnectionId) return
+    setSavingRelationship(true)
+    try {
+      const updated = await updateElder(editingConnectionId, editingRelationship)
+      if (!updated) {
+        toast.error('Failed to update relationship')
+        return
+      }
+      toast.success('Relationship updated')
+      cancelEditRelationship()
+    } finally {
+      setSavingRelationship(false)
+    }
+  }
+
   const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
@@ -122,6 +146,15 @@ export default function FamilyDashboard() {
     const loadData = async () => {
       try {
         setLoading(true)
+        if (user && user.role?.toLowerCase() !== 'family') {
+          const target = user.role?.toLowerCase() === 'elder'
+            ? '/elder-dashboard'
+            : user.role?.toLowerCase() === 'volunteer'
+            ? '/volunteer-dashboard'
+            : '/dashboard'
+          router.replace(target)
+          return
+        }
         if (user) {
           setProfileData(user)
         }
@@ -134,18 +167,16 @@ export default function FamilyDashboard() {
     }
 
     loadData()
-  }, [user, toast])
+  }, [user, toast, router])
 
-  const handleLogout = async () => {
-    try {
-      logout()
-      localStorage.removeItem('auth_token')
-      router.push('/login')
-    } catch (error) {
-      console.error('Logout error:', error)
-      toast.error('Failed to logout')
+  useEffect(() => {
+    const tab = typeof router.query.tab === 'string' ? router.query.tab : ''
+    if (tab === 'updates') {
+      setActiveTab('activities')
+    } else if (tab === 'communication') {
+      setActiveTab('messages')
     }
-  }
+  }, [router.query.tab])
 
   if (loading) {
     return (
@@ -166,6 +197,17 @@ export default function FamilyDashboard() {
     if (!fullName || fullName === 'User') return 'U'
     return fullName[0].toUpperCase()
   }
+
+  const connectedElderIds = new Set(elders.map((item) => item.elder_user_id))
+  const familyRequests = requests.filter((request) => connectedElderIds.has(request.elder_id))
+  const recentFamilyRequests = [...familyRequests]
+    .sort((a, b) => new Date(b.requested_date).getTime() - new Date(a.requested_date).getTime())
+    .slice(0, 8)
+  const openRequestCount = familyRequests.filter((item) => ['PENDING', 'ACCEPTED', 'IN_PROGRESS'].includes(item.status)).length
+  const completedRequestCount = familyRequests.filter((item) => item.status === 'COMPLETED').length
+
+  const getElderName = (elderId: string) =>
+    elders.find((item) => item.elder_user_id === elderId)?.elder?.first_name || 'Connected Elder'
 
   return (
     <>
@@ -200,13 +242,6 @@ export default function FamilyDashboard() {
                   </div>
                 </div>
               </div>
-              <button 
-                onClick={handleLogout}
-                className="flex items-center gap-2 px-4 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg transition"
-              >
-                <LogOut className="w-5 h-5" />
-                Logout
-              </button>
             </div>
           </div>
 
@@ -257,6 +292,11 @@ export default function FamilyDashboard() {
           {activeTab === 'overview' && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2 space-y-6">
+                {eldersError && (
+                  <Card className="border-amber-200 bg-amber-50">
+                    <p className="text-sm text-amber-800">{eldersError}</p>
+                  </Card>
+                )}
                 {/* Connected Elders Summary */}
                 <Card>
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Connected Elders</h3>
@@ -280,9 +320,23 @@ export default function FamilyDashboard() {
 
                 {/* Recent Messages */}
                 <Card>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Messages</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Companion Updates</h3>
                   <div className="space-y-3">
-                    <p className="text-sm text-gray-600">No messages yet</p>
+                    {requestsLoading ? (
+                      <p className="text-sm text-gray-600">Loading updates...</p>
+                    ) : recentFamilyRequests.length === 0 ? (
+                      <p className="text-sm text-gray-600">No activity updates yet</p>
+                    ) : (
+                      recentFamilyRequests.slice(0, 4).map((request) => (
+                        <div key={request.id} className="p-3 rounded-lg border border-gray-200">
+                          <p className="text-sm font-semibold text-gray-900">{request.activity_type}</p>
+                          <p className="text-xs text-gray-600">For: {getElderName(request.elder_id)}</p>
+                          <p className="text-xs text-gray-500">
+                            Status: {request.status} · {new Date(request.requested_date).toLocaleDateString()}
+                          </p>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </Card>
               </div>
@@ -293,10 +347,10 @@ export default function FamilyDashboard() {
                 <Card>
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
                   <div className="space-y-2">
-                    <Button className="w-full" variant="secondary">
+                    <Button className="w-full" variant="secondary" onClick={() => setActiveTab('messages')}>
                       Contact Elder
                     </Button>
-                    <Button className="w-full" variant="secondary">
+                    <Button className="w-full" variant="secondary" onClick={() => setActiveTab('activities')}>
                       View Calendar
                     </Button>
                   </div>
@@ -509,7 +563,12 @@ export default function FamilyDashboard() {
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Family Settings</h3>
                 <div className="space-y-4">
                   <label className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg cursor-pointer">
-                    <input type="checkbox" defaultChecked className="w-4 h-4 text-rose-600 rounded" />
+                    <input
+                      type="checkbox"
+                      checked={preferences.notifyOnElderActivity ?? true}
+                      onChange={(e) => updateRolePreferences({ notifyOnElderActivity: e.target.checked })}
+                      className="w-4 h-4 text-rose-600 rounded"
+                    />
                     <div>
                       <p className="font-medium text-gray-900">Notify on Elder Activity</p>
                       <p className="text-sm text-gray-600">Get notifications when elders use the app</p>
@@ -517,13 +576,19 @@ export default function FamilyDashboard() {
                   </label>
                   
                   <label className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg cursor-pointer">
-                    <input type="checkbox" defaultChecked className="w-4 h-4 text-rose-600 rounded" />
+                    <input
+                      type="checkbox"
+                      checked={preferences.shareMedicationReminders ?? true}
+                      onChange={(e) => updateRolePreferences({ shareMedicationReminders: e.target.checked })}
+                      className="w-4 h-4 text-rose-600 rounded"
+                    />
                     <div>
                       <p className="font-medium text-gray-900">Share Medication Reminders</p>
                       <p className="text-sm text-gray-600">View elder&apos;s medication and appointment reminders</p>
                     </div>
                   </label>
                 </div>
+                {saved && <p className="text-sm text-green-600 mt-3">✓ Preferences saved!</p>}
               </Card>
             </div>
           )}
@@ -531,10 +596,15 @@ export default function FamilyDashboard() {
           {/* Elders Tab */}
           {activeTab === 'elders' && (
             <div className="space-y-6">
+              {eldersError && (
+                <Card className="border-amber-200 bg-amber-50">
+                  <p className="text-sm text-amber-800">{eldersError}</p>
+                </Card>
+              )}
               <Card>
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold text-gray-900">Connected Elders</h3>
-                  <Button onClick={() => setShowAddElderModal(true)}>
+                  <Button onClick={() => setShowAddElderModal(true)} disabled={eldersLoading}>
                     <Plus className="w-4 h-4 mr-2" />
                     Add Elder
                   </Button>
@@ -565,12 +635,55 @@ export default function FamilyDashboard() {
                             Added: {new Date(elderConnection.added_date).toLocaleDateString()}
                           </p>
                         </div>
-                        <Button
-                          variant="secondary"
-                          onClick={() => handleRemoveElder(elderConnection.id)}
-                        >
-                          Remove
-                        </Button>
+                        <div className="flex flex-col gap-2 min-w-[180px]">
+                          {editingConnectionId === elderConnection.id ? (
+                            <>
+                              <select
+                                value={editingRelationship}
+                                onChange={(e) => setEditingRelationship(e.target.value)}
+                                className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
+                              >
+                                <option value="Parent">Parent</option>
+                                <option value="Grandparent">Grandparent</option>
+                                <option value="Sibling">Sibling</option>
+                                <option value="Aunt/Uncle">Aunt/Uncle</option>
+                                <option value="Other">Other</option>
+                              </select>
+                              <div className="flex gap-2">
+                                <Button
+                                  className="flex-1"
+                                  onClick={handleSaveRelationship}
+                                  disabled={savingRelationship}
+                                >
+                                  {savingRelationship ? 'Saving...' : 'Save'}
+                                </Button>
+                                <Button
+                                  className="flex-1"
+                                  variant="secondary"
+                                  onClick={cancelEditRelationship}
+                                  disabled={savingRelationship}
+                                >
+                                  Cancel
+                                </Button>
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <Button
+                                variant="secondary"
+                                onClick={() => beginEditRelationship(elderConnection.id, elderConnection.relationship)}
+                              >
+                                Edit
+                              </Button>
+                              <Button
+                                variant="secondary"
+                                onClick={() => handleRemoveElder(elderConnection.id)}
+                              >
+                                Remove
+                              </Button>
+                            </>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -585,17 +698,33 @@ export default function FamilyDashboard() {
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Family Activities</h3>
               <div className="space-y-3">
                 <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
-                  <span className="text-sm text-gray-700">Monthly activities</span>
-                  <span className="font-semibold text-gray-900">{stats.activitiesThisMonth}</span>
+                  <span className="text-sm text-gray-700">Open companion requests</span>
+                  <span className="font-semibold text-gray-900">{openRequestCount}</span>
                 </div>
                 <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
-                  <span className="text-sm text-gray-700">Upcoming visits</span>
-                  <span className="font-semibold text-gray-900">{stats.upcomingVisits}</span>
+                  <span className="text-sm text-gray-700">Completed requests</span>
+                  <span className="font-semibold text-gray-900">{completedRequestCount}</span>
                 </div>
                 <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
                   <span className="text-sm text-gray-700">Connected elders</span>
-                  <span className="font-semibold text-gray-900">{stats.eldersConnected}</span>
+                  <span className="font-semibold text-gray-900">{elders.length}</span>
                 </div>
+              </div>
+              <div className="mt-6 border-t border-gray-200 pt-4 space-y-3">
+                <h4 className="text-sm font-semibold text-gray-900">Recent Request Timeline</h4>
+                {requestsLoading ? (
+                  <p className="text-sm text-gray-600">Loading timeline...</p>
+                ) : recentFamilyRequests.length === 0 ? (
+                  <p className="text-sm text-gray-600">No companion activity yet for connected elders.</p>
+                ) : (
+                  recentFamilyRequests.map((request) => (
+                    <div key={request.id} className="border border-gray-200 rounded-lg p-3">
+                      <p className="text-sm font-semibold text-gray-900">{request.activity_type}</p>
+                      <p className="text-xs text-gray-600">{getElderName(request.elder_id)} · {request.status}</p>
+                      <p className="text-xs text-gray-500">{new Date(request.requested_date).toLocaleString()}</p>
+                    </div>
+                  ))
+                )}
               </div>
             </Card>
           )}
@@ -603,30 +732,43 @@ export default function FamilyDashboard() {
           {/* Messages Tab */}
           {activeTab === 'messages' && (
             <Card>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Messages</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Care Coordination Updates</h3>
               {elders.length === 0 ? (
                 <p className="text-sm text-gray-600">Connect an elder to start receiving message updates.</p>
+              ) : requestsLoading ? (
+                <p className="text-sm text-gray-600">Loading updates...</p>
               ) : (
                 <div className="space-y-3">
-                  {elders.map((elderConnection) => (
-                    <div key={elderConnection.id} className="border border-gray-200 rounded-lg p-4">
-                      <p className="font-semibold text-gray-900">
-                        {elderConnection.elder?.first_name || 'Connected Elder'}
-                      </p>
-                      <p className="text-sm text-gray-600">No new messages</p>
-                    </div>
-                  ))}
+                  {elders.map((elderConnection) => {
+                    const elderRequest = recentFamilyRequests.find((request) => request.elder_id === elderConnection.elder_user_id)
+                    return (
+                      <div key={elderConnection.id} className="border border-gray-200 rounded-lg p-4">
+                        <p className="font-semibold text-gray-900">
+                          {elderConnection.elder?.first_name || 'Connected Elder'}
+                        </p>
+                        {elderRequest ? (
+                          <>
+                            <p className="text-sm text-gray-700 mt-1">
+                              Latest request: {elderRequest.activity_type} ({elderRequest.status})
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              Updated: {new Date(elderRequest.requested_date).toLocaleString()}
+                            </p>
+                          </>
+                        ) : (
+                          <p className="text-sm text-gray-600 mt-1">No companion updates yet</p>
+                        )}
+                        {elderConnection.elder?.email && (
+                          <p className="text-xs text-gray-500 mt-1">Contact: {elderConnection.elder.email}</p>
+                        )}
+                      </div>
+                    )
+                  })}
                 </div>
               )}
             </Card>
           )}
 
-          {/* Other Tabs - Placeholder */}
-          {activeTab !== 'overview' && activeTab !== 'settings' && activeTab !== 'elders' && activeTab !== 'activities' && activeTab !== 'messages' && (
-            <Card>
-              <p className="text-gray-600">This section is currently unavailable.</p>
-            </Card>
-          )}
         </div>
       </Layout>
 
@@ -666,7 +808,9 @@ export default function FamilyDashboard() {
                 <Button variant="secondary" onClick={() => setShowAddElderModal(false)}>
                   Cancel
                 </Button>
-                <Button onClick={handleAddElder}>Add Elder</Button>
+                <Button onClick={handleAddElder} disabled={eldersLoading}>
+                  {eldersLoading ? 'Adding...' : 'Add Elder'}
+                </Button>
               </div>
             </div>
           </div>

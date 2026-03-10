@@ -14,6 +14,7 @@ import Badge from '@/components/Badge'
 import Button from '@/components/Button'
 import { useStats } from '@/hooks/useStats'
 import { useCompanionRequests } from '@/hooks/useCompanionRequests'
+import { useCompanionMessages } from '@/hooks/useCompanionMessages'
 import { usePreferences } from '@/hooks/usePreferences'
 import {
   Calendar,
@@ -36,44 +37,67 @@ import {
   RefreshCw,
   UserCheck,
   Trash2,
-  LogOut,
   Upload,
+  Check,
 } from 'lucide-react'
 import { useRef } from 'react'
 
 type TabType = 'overview' | 'matches' | 'calendar' | 'impact' | 'profile' | 'settings'
 
-const PLACEHOLDER_VOLUNTEER = {
-  id: 'vol-001',
-  email: 'volunteer@elderconnect.dev',
-  first_name: 'Volunteer',
+const availabilityDayOptions = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+const volunteerSkillOptions = [
+  { id: 'conversation', label: 'Great Listener' },
+  { id: 'reading', label: 'Reading Aloud' },
+  { id: 'music', label: 'Music & Arts' },
+  { id: 'games', label: 'Games & Activities' },
+  { id: 'errands', label: 'Running Errands' },
+  { id: 'transport', label: 'Transportation' },
+]
+const volunteerAvailabilityOptions = [
+  { id: 'weekday-morning', label: 'Weekday Mornings' },
+  { id: 'weekday-afternoon', label: 'Weekday Afternoons' },
+  { id: 'weekday-evening', label: 'Weekday Evenings' },
+  { id: 'weekend-morning', label: 'Weekend Mornings' },
+  { id: 'weekend-afternoon', label: 'Weekend Afternoons' },
+  { id: 'weekend-evening', label: 'Weekend Evenings' },
+]
+const volunteerTravelDistanceOptions = [
+  { id: '5', label: 'Walking Distance', description: 'Up to 5 km' },
+  { id: '15', label: 'Short Drive', description: 'Up to 15 km' },
+  { id: '30', label: 'Willing to Drive', description: 'Up to 30 km' },
+  { id: '50', label: 'Anywhere', description: 'Distance no problem' },
+]
+
+const EMPTY_VOLUNTEER_PROFILE = {
+  id: '',
+  email: '',
+  first_name: '',
   role: 'VOLUNTEER',
   phone_number: '',
-  profile_picture_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop',
-}
-
-const PLACEHOLDER_STATS = {
-  hoursThisWeek: 0,
-  hoursThisMonth: 0,
-  matchesThisMonth: 0,
-  upcomingMatches: 0,
-  averageRating: 0,
-  totalReviews: 0,
+  profile_picture_url: '',
 }
 
 export default function VolunteerDashboard() {
   const router = useRouter()
-  const { user, logout } = useAuth()
+  const { user } = useAuth()
   const toast = useToast()
   
   // Hooks for data
   const stats = useStats()
-  const { requests, createRequest } = useCompanionRequests()
-  const { preferences, updateNotifications, updateAccessibility, updatePrivacy, saved } = usePreferences()
+  const { requests, acceptRequest, fetchRequests, completeRequest } = useCompanionRequests()
+  const { messages, loading: messagesLoading, sending: messageSending, error: messagesError, fetchMessages, sendMessage } = useCompanionMessages()
+  const { preferences, updateNotifications, updateAccessibility, updatePrivacy, updateRolePreferences, saved } = usePreferences()
   
   const [activeTab, setActiveTab] = useState<TabType>('overview')
+  const [showAvailabilityModal, setShowAvailabilityModal] = useState(false)
+  const [activeChatRequestId, setActiveChatRequestId] = useState<string | null>(null)
+  const [chatInput, setChatInput] = useState('')
+  const [selectedAvailabilitySlots, setSelectedAvailabilitySlots] = useState<string[]>([])
+  const [selectedHelpCategories, setSelectedHelpCategories] = useState<string[]>([])
+  const [travelDistance, setTravelDistance] = useState<string>('')
+  const [savingAvailability, setSavingAvailability] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [profileData, setProfileData] = useState(user || PLACEHOLDER_VOLUNTEER)
+  const [profileData, setProfileData] = useState(user || EMPTY_VOLUNTEER_PROFILE)
   const [avatarPreview, setAvatarPreview] = useState(user?.profile_picture_url || '')
   const avatarInputRef = useRef<HTMLInputElement>(null)
 
@@ -102,6 +126,15 @@ export default function VolunteerDashboard() {
     const loadData = async () => {
       try {
         setLoading(true)
+        if (user && user.role?.toLowerCase() !== 'volunteer') {
+          const target = user.role?.toLowerCase() === 'elder'
+            ? '/elder-dashboard'
+            : user.role?.toLowerCase() === 'family'
+            ? '/family-dashboard'
+            : '/dashboard'
+          router.replace(target)
+          return
+        }
         if (user) {
           setProfileData(user)
         }
@@ -114,17 +147,88 @@ export default function VolunteerDashboard() {
     }
 
     loadData()
-  }, [user, toast])
+  }, [user, toast, router])
 
-  const handleLogout = async () => {
-    try {
-      logout()
-      localStorage.removeItem('auth_token')
-      router.push('/login')
-    } catch (error) {
-      console.error('Logout error:', error)
-      toast.error('Failed to logout')
+  useEffect(() => {
+    const tab = typeof router.query.tab === 'string' ? router.query.tab : ''
+    if (tab === 'matches') setActiveTab('matches')
+    if (tab === 'calendar') setActiveTab('calendar')
+    if (tab === 'impact') setActiveTab('impact')
+    if (tab === 'profile') setActiveTab('profile')
+    if (tab === 'settings') setActiveTab('settings')
+    if (tab === 'overview') setActiveTab('overview')
+  }, [router.query.tab])
+
+  useEffect(() => {
+    setSelectedAvailabilitySlots(Array.isArray(preferences.availabilityDays) ? preferences.availabilityDays : [])
+    setSelectedHelpCategories(Array.isArray(preferences.preferredActivityTypes) ? preferences.preferredActivityTypes : [])
+    setTravelDistance(typeof preferences.volunteerTravelDistance === 'string' ? preferences.volunteerTravelDistance : '')
+  }, [preferences.availabilityDays, preferences.preferredActivityTypes, preferences.volunteerTravelDistance])
+
+  const handleAcceptRequest = async (requestId: string) => {
+    const accepted = await acceptRequest(requestId)
+    if (accepted) {
+      toast.success('Companion request accepted')
+      await fetchRequests()
+      return
     }
+    toast.error('Failed to accept request')
+  }
+
+  const handleCompleteRequest = async (requestId: string) => {
+    const completed = await completeRequest(requestId)
+    if (!completed) {
+      toast.error('Failed to complete request')
+      return
+    }
+    toast.success('Request marked as completed')
+    await fetchRequests()
+  }
+
+  const toggleValue = (current: string[], value: string, set: (next: string[]) => void) => {
+    if (current.includes(value)) {
+      set(current.filter((item) => item !== value))
+    } else {
+      set([...current, value])
+    }
+  }
+
+  const handleSaveAvailability = async () => {
+    setSavingAvailability(true)
+    try {
+      const ok = await updateRolePreferences({
+        preferredActivityTypes: selectedHelpCategories,
+        availabilityDays: selectedAvailabilitySlots,
+        volunteerTravelDistance: travelDistance
+      })
+      if (!ok) {
+        toast.error('Failed to save availability')
+        return
+      }
+      toast.success('Availability updated')
+      setShowAvailabilityModal(false)
+    } finally {
+      setSavingAvailability(false)
+    }
+  }
+
+  const handleOpenChat = async (requestId: string) => {
+    const nextId = activeChatRequestId === requestId ? null : requestId
+    setActiveChatRequestId(nextId)
+    setChatInput('')
+    if (nextId) {
+      await fetchMessages(nextId)
+    }
+  }
+
+  const handleSendChatMessage = async () => {
+    if (!activeChatRequestId) return
+    const sent = await sendMessage(activeChatRequestId, chatInput)
+    if (!sent) {
+      toast.error('Failed to send message')
+      return
+    }
+    setChatInput('')
   }
 
   if (loading) {
@@ -141,11 +245,102 @@ export default function VolunteerDashboard() {
   }
 
   const fullName = profileData?.first_name || 'User'
+  const completionNeedsVolunteer = requests.filter(
+    (r) => (r.status === 'ACCEPTED' || r.status === 'IN_PROGRESS') && r.completion?.waiting_for === 'VOLUNTEER'
+  ).length
+  const completionWaitingOnElder = requests.filter(
+    (r) => (r.status === 'ACCEPTED' || r.status === 'IN_PROGRESS') && r.completion?.waiting_for === 'ELDER'
+  ).length
+  const prioritizedRequests = [
+    ...requests.filter(
+      (r) => (r.status === 'ACCEPTED' || r.status === 'IN_PROGRESS') && r.completion?.waiting_for === 'VOLUNTEER'
+    ),
+    ...requests.filter(
+      (r) => !((r.status === 'ACCEPTED' || r.status === 'IN_PROGRESS') && r.completion?.waiting_for === 'VOLUNTEER')
+    ),
+  ]
 
   const getInitials = () => {
     if (!fullName || fullName === 'User') return 'U'
     return fullName[0].toUpperCase()
   }
+
+  const renderVolunteerPreferenceFields = () => (
+    <div className="space-y-6">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-3">Help Categories</label>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {volunteerSkillOptions.map((option) => {
+            const isSelected = selectedHelpCategories.includes(option.id)
+            return (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => toggleValue(selectedHelpCategories, option.id, setSelectedHelpCategories)}
+                className={`p-3 rounded-xl border-2 transition-all duration-200 text-left relative ${
+                  isSelected
+                    ? 'border-green-500 bg-green-50 shadow-md scale-[1.02]'
+                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                <span className="font-medium text-sm text-gray-900">{option.label}</span>
+                {isSelected && <Check className="w-4 h-4 absolute top-2 right-2 text-green-600" />}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-3">Availability</label>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+          {volunteerAvailabilityOptions.map((option) => {
+            const isSelected = selectedAvailabilitySlots.includes(option.id)
+            return (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => toggleValue(selectedAvailabilitySlots, option.id, setSelectedAvailabilitySlots)}
+                className={`p-2 rounded-lg border-2 text-xs font-medium transition-all text-left ${
+                  isSelected
+                    ? 'border-green-500 bg-green-50 text-green-700'
+                    : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                }`}
+              >
+                {isSelected && <Check className="w-3 h-3 inline mr-1" />}
+                {option.label}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-3">Travel Distance</label>
+        <div className="space-y-3">
+          {volunteerTravelDistanceOptions.map((option) => {
+            const isSelected = travelDistance === option.id
+            return (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => setTravelDistance(option.id)}
+                className={`w-full p-4 rounded-xl border-2 transition-all duration-200 text-left flex items-center justify-between ${
+                  isSelected
+                    ? 'border-green-500 bg-green-50 shadow-md'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <div>
+                  <span className="font-medium text-gray-900">{option.label}</span>
+                  <p className="text-sm text-gray-500">{option.description}</p>
+                </div>
+                {isSelected && <Check className="w-5 h-5 text-green-600" />}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
 
   return (
     <>
@@ -180,13 +375,6 @@ export default function VolunteerDashboard() {
                   </div>
                 </div>
               </div>
-              <button 
-                onClick={handleLogout}
-                className="flex items-center gap-2 px-4 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg transition"
-              >
-                <LogOut className="w-5 h-5" />
-                Logout
-              </button>
             </div>
           </div>
 
@@ -198,6 +386,7 @@ export default function VolunteerDashboard() {
                   <p className="text-sm text-gray-600">Pending Requests</p>
                   <p className="text-3xl font-bold text-blue-600">{stats.companionRequestsPending}</p>
                   <p className="text-xs text-gray-500">Awaiting response</p>
+                  <p className="text-xs text-amber-600 mt-1">Need your completion: {completionNeedsVolunteer}</p>
                 </div>
                 <Clock className="w-12 h-12 text-blue-200" />
               </div>
@@ -271,10 +460,10 @@ export default function VolunteerDashboard() {
                 <Card>
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
                   <div className="space-y-2">
-                    <Button className="w-full" variant="secondary">
+                    <Button className="w-full" variant="secondary" onClick={() => setShowAvailabilityModal(true)}>
                       Update Availability
                     </Button>
-                    <Button className="w-full" variant="secondary">
+                    <Button className="w-full" variant="secondary" onClick={() => setActiveTab('matches')}>
                       View Messages
                     </Button>
                   </div>
@@ -495,38 +684,12 @@ export default function VolunteerDashboard() {
               {/* Volunteer Preferences */}
               <Card>
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Volunteer Settings</h3>
-                <div className="space-y-4">
+                <div className="space-y-6">
+                  {renderVolunteerPreferenceFields()}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Max Hours Per Week</label>
-                    <input
-                      type="number"
-                      min="1"
-                      max="40"
-                      defaultValue={10}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                      placeholder="Hours available per week"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Preferred Activity Types</label>
-                    <div className="space-y-2">
-                      <label className="flex items-center gap-2">
-                        <input type="checkbox" defaultChecked className="rounded" />
-                        <span className="text-sm text-gray-700">Conversation & Companionship</span>
-                      </label>
-                      <label className="flex items-center gap-2">
-                        <input type="checkbox" defaultChecked className="rounded" />
-                        <span className="text-sm text-gray-700">Recreational Activities</span>
-                      </label>
-                      <label className="flex items-center gap-2">
-                        <input type="checkbox" className="rounded" />
-                        <span className="text-sm text-gray-700">Help with Technology</span>
-                      </label>
-                      <label className="flex items-center gap-2">
-                        <input type="checkbox" className="rounded" />
-                        <span className="text-sm text-gray-700">Errands & Shopping</span>
-                      </label>
-                    </div>
+                    <Button onClick={handleSaveAvailability} disabled={savingAvailability}>
+                      {savingAvailability ? 'Saving...' : 'Save Volunteer Settings'}
+                    </Button>
                   </div>
                 </div>
                 {saved && <p className="text-sm text-green-600 mt-3">✓ Preferences saved!</p>}
@@ -538,36 +701,206 @@ export default function VolunteerDashboard() {
           {activeTab === 'matches' && (
             <Card>
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Companion Requests</h3>
+              {completionNeedsVolunteer > 0 && (
+                <div className="mb-4 p-3 border border-amber-200 bg-amber-50 rounded-lg">
+                  <p className="text-sm font-medium text-amber-800 mb-2">Needs Your Confirmation ({completionNeedsVolunteer})</p>
+                  <div className="space-y-2">
+                    {prioritizedRequests
+                      .filter((r) => (r.status === 'ACCEPTED' || r.status === 'IN_PROGRESS') && r.completion?.waiting_for === 'VOLUNTEER')
+                      .map((req) => (
+                        <div key={`confirm-${req.id}`} className="flex items-center justify-between gap-2 text-sm">
+                          <span className="text-amber-900">
+                            {req.activity_type} • {req.description || 'No description'}
+                          </span>
+                          <Button
+                            variant="secondary"
+                            onClick={() => handleCompleteRequest(req.id)}
+                          >
+                            Confirm Complete
+                          </Button>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
               {requests.length === 0 ? (
                 <p className="text-sm text-gray-600">No companion requests available right now.</p>
               ) : (
                 <div className="space-y-3">
-                  {requests.map((req) => (
+                  {prioritizedRequests.map((req) => (
                     <div key={req.id} className="border border-gray-200 rounded-lg p-4">
-                      <div className="flex items-center justify-between">
-                        <div>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="space-y-2">
                           <p className="font-semibold text-gray-900">{req.activity_type}</p>
                           <p className="text-sm text-gray-600">{req.description || 'No description provided'}</p>
+                          {req.status === 'PENDING' && typeof req.matching?.score === 'number' && (
+                            <div className="inline-flex flex-wrap items-center gap-2 text-xs mt-1">
+                              <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200">
+                                Match {req.matching.score}%
+                              </span>
+                              {req.matching.activity_match && (
+                                <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 border border-blue-200">
+                                  Category fit
+                                </span>
+                              )}
+                              {req.matching.availability_match && (
+                                <span className="px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 border border-purple-200">
+                                  Time fit
+                                </span>
+                              )}
+                            </div>
+                          )}
+                          <div className="space-y-1 text-sm text-gray-700">
+                            <p>
+                              <span className="font-medium">Posted by:</span>{' '}
+                              {req.elder?.first_name || 'Elder'} {req.elder?.last_name || ''}
+                            </p>
+                            {req.elder?.email && (
+                              <p>
+                                <span className="font-medium">Email:</span> {req.elder.email}
+                              </p>
+                            )}
+                            {req.elder?.phone_number && (
+                              <p>
+                                <span className="font-medium">Phone:</span> {req.elder.phone_number}
+                              </p>
+                            )}
+                            {(req.elder?.address_line_1 || req.elder?.city || req.elder?.postcode) && (
+                              <p>
+                                <span className="font-medium">Address:</span>{' '}
+                                {[req.elder?.address_line_1, req.elder?.city, req.elder?.postcode]
+                                  .filter(Boolean)
+                                  .join(', ')}
+                              </p>
+                            )}
+                            {req.preferred_time_start && (
+                              <p>
+                                <span className="font-medium">Preferred start:</span>{' '}
+                                {req.preferred_time_start}
+                              </p>
+                            )}
+                            {req.preferred_time_end && (
+                              <p>
+                                <span className="font-medium">Preferred end:</span>{' '}
+                                {req.preferred_time_end}
+                              </p>
+                            )}
+                            {(req.location_latitude !== undefined && req.location_longitude !== undefined) && (
+                              <p>
+                                <span className="font-medium">Location:</span>{' '}
+                                {Number(req.location_latitude).toFixed(5)}, {Number(req.location_longitude).toFixed(5)}
+                              </p>
+                            )}
+                          </div>
                         </div>
-                        <Badge
-                          variant={
-                            req.status === 'PENDING'
-                              ? 'warning'
-                              : req.status === 'ACCEPTED' || req.status === 'COMPLETED'
-                              ? 'success'
-                              : req.status === 'IN_PROGRESS'
-                              ? 'info'
-                              : req.status === 'CANCELLED'
-                              ? 'error'
-                              : 'default'
-                          }
-                        >
-                          {req.status}
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <Badge
+                            variant={
+                              req.status === 'PENDING'
+                                ? 'warning'
+                                : req.status === 'ACCEPTED' || req.status === 'COMPLETED'
+                                ? 'success'
+                                : req.status === 'IN_PROGRESS'
+                                ? 'info'
+                                : req.status === 'CANCELLED'
+                                ? 'error'
+                                : 'default'
+                            }
+                          >
+                            {req.status}
+                          </Badge>
+                          {req.status === 'PENDING' && (
+                            <Button
+                              variant="secondary"
+                              onClick={() => handleAcceptRequest(req.id)}
+                            >
+                              Accept
+                            </Button>
+                          )}
+                          {(req.status === 'ACCEPTED' || req.status === 'IN_PROGRESS') && (
+                            req.completion?.waiting_for === 'ELDER' ? (
+                              <p className="text-xs text-blue-700 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
+                                Completion requested. Waiting for elder confirmation.
+                              </p>
+                            ) : (
+                              <div className="space-y-2">
+                                {req.completion?.waiting_for === 'VOLUNTEER' && (
+                                  <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                                    Elder requested completion. Please confirm to finish this request.
+                                  </p>
+                                )}
+                                <Button
+                                  variant="secondary"
+                                  onClick={() => handleCompleteRequest(req.id)}
+                                >
+                                  {req.completion?.waiting_for === 'VOLUNTEER' ? 'Confirm Complete' : 'Request Completion'}
+                                </Button>
+                              </div>
+                            )
+                          )}
+                        </div>
                       </div>
+
+                      {['ACCEPTED', 'IN_PROGRESS', 'COMPLETED'].includes(req.status) && (
+                        <div className="mt-3 pt-3 border-t">
+                          <Button
+                            variant="secondary"
+                            onClick={() => handleOpenChat(req.id)}
+                          >
+                            {activeChatRequestId === req.id ? 'Hide Chat' : 'Open Chat'}
+                          </Button>
+
+                          {activeChatRequestId === req.id && (
+                            <div className="mt-3 space-y-3">
+                              {messagesError && <p className="text-sm text-red-600">{messagesError}</p>}
+                              <div className="max-h-56 overflow-y-auto border border-gray-200 rounded-lg p-3 bg-gray-50">
+                                {messagesLoading ? (
+                                  <p className="text-sm text-gray-600">Loading messages...</p>
+                                ) : messages.length === 0 ? (
+                                  <p className="text-sm text-gray-600">No messages yet. Start the conversation.</p>
+                                ) : (
+                                  <div className="space-y-2">
+                                    {messages.map((message) => (
+                                      <div key={message.id} className="text-sm">
+                                        <p className="font-medium text-gray-900">
+                                          {message.sender?.first_name || (message.sender_id === req.volunteer_id ? 'You' : 'Elder')}
+                                          <span className="ml-2 text-xs text-gray-500 font-normal">
+                                            {new Date(message.created_at).toLocaleString()}
+                                          </span>
+                                        </p>
+                                        <p className="text-gray-700">{message.message_text}</p>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex gap-2">
+                                <input
+                                  type="text"
+                                  value={chatInput}
+                                  onChange={(e) => setChatInput(e.target.value)}
+                                  placeholder="Type message..."
+                                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                />
+                                <Button
+                                  onClick={handleSendChatMessage}
+                                  disabled={messageSending || !chatInput.trim()}
+                                >
+                                  {messageSending ? 'Sending...' : 'Send'}
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
+              )}
+              {completionWaitingOnElder > 0 && (
+                <p className="text-xs text-blue-700 mt-3">
+                  Waiting on elder confirmation for {completionWaitingOnElder} request(s).
+                </p>
               )}
             </Card>
           )}
@@ -640,6 +973,25 @@ export default function VolunteerDashboard() {
           )}
         </div>
       </Layout>
+
+      {showAvailabilityModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-start sm:items-center justify-center z-50 p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl p-4 sm:p-6 my-4 sm:my-0 max-h-[90vh] overflow-y-auto">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Update Availability</h3>
+            <div className="space-y-6">
+              {renderVolunteerPreferenceFields()}
+              <div className="flex justify-end gap-2">
+                <Button variant="secondary" onClick={() => setShowAvailabilityModal(false)} disabled={savingAvailability}>
+                  Cancel
+                </Button>
+                <Button onClick={handleSaveAvailability} disabled={savingAvailability}>
+                  {savingAvailability ? 'Saving...' : 'Save'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }

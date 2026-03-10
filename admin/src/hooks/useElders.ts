@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import apiClient from '@/utils/api-client'
 import { User } from '@/contexts/AuthContext'
 
@@ -11,36 +11,42 @@ export interface ElderConnection {
   elder?: User
 }
 
-export const useElders = () => {
+interface UseEldersOptions {
+  enabled?: boolean
+}
+
+export const useElders = (options: UseEldersOptions = {}) => {
+  const { enabled = true } = options
   const [elders, setElders] = useState<ElderConnection[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   // Fetch connected elders for family member
-  const fetchElders = async () => {
+  const fetchElders = useCallback(async () => {
+    if (!enabled) {
+      setElders([])
+      return
+    }
+
     setLoading(true)
     setError(null)
     try {
-      // For now, we'll use a mock API endpoint
-      // In production, this would be: GET /family-elders or similar
-      const response = await apiClient.request('/family-elders', {
-        method: 'GET'
-      })
+      const response = await apiClient.getFamilyElders()
       
       if (response.success && response.data) {
         setElders(Array.isArray(response.data) ? response.data : [])
       } else {
-        // Fallback to empty list if endpoint not available
+        setError(response.error || 'Failed to fetch elders')
         setElders([])
       }
     } catch (err) {
       console.error('Error fetching elders:', err)
-      // Don't set error state for missing endpoint
+      setError('Failed to fetch elders')
       setElders([])
     } finally {
       setLoading(false)
     }
-  }
+  }, [enabled])
 
   // Add new elder to family
   const addElder = async (
@@ -50,13 +56,7 @@ export const useElders = () => {
     setLoading(true)
     setError(null)
     try {
-      const response = await apiClient.request('/family-elders', {
-        method: 'POST',
-        body: JSON.stringify({
-          elder_email: elderEmail,
-          relationship
-        })
-      })
+      const response = await apiClient.addFamilyElder(elderEmail, relationship)
 
       if (response.success && response.data) {
         const newElder = response.data as ElderConnection
@@ -80,9 +80,7 @@ export const useElders = () => {
     setLoading(true)
     setError(null)
     try {
-      const response = await apiClient.request(`/family-elders/${connectionId}`, {
-        method: 'DELETE'
-      })
+      const response = await apiClient.removeFamilyElder(connectionId)
 
       if (response.success) {
         setElders(elders.filter(e => e.id !== connectionId))
@@ -108,10 +106,7 @@ export const useElders = () => {
     setLoading(true)
     setError(null)
     try {
-      const response = await apiClient.request(`/family-elders/${connectionId}`, {
-        method: 'PUT',
-        body: JSON.stringify({ relationship })
-      })
+      const response = await apiClient.updateFamilyElder(connectionId, relationship)
 
       if (response.success && response.data) {
         const updated = response.data as ElderConnection
@@ -131,8 +126,14 @@ export const useElders = () => {
   }
 
   useEffect(() => {
+    if (!enabled) {
+      setElders([])
+      setLoading(false)
+      setError(null)
+      return
+    }
     fetchElders()
-  }, [])
+  }, [enabled, fetchElders])
 
   return {
     elders,
