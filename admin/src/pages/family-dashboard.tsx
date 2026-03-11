@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import Head from 'next/head'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -16,6 +16,9 @@ import { useStats } from '@/hooks/useStats'
 import { useElders } from '@/hooks/useElders'
 import { useCompanionRequests } from '@/hooks/useCompanionRequests'
 import { usePreferences } from '@/hooks/usePreferences'
+import { useFamilyMessages } from '@/hooks/useFamilyMessages'
+import type { HealthCheckin } from '@/hooks/useHealthCheckins'
+import apiClient from '@/utils/api-client'
 import {
   Heart,
   Clock,
@@ -54,6 +57,7 @@ export default function FamilyDashboard() {
   const stats = useStats()
   const { elders, addElder, removeElder, updateElder, loading: eldersLoading, error: eldersError } = useElders()
   const { requests, loading: requestsLoading } = useCompanionRequests()
+  const { messages: familyMessages, loading: familyMessagesLoading, sending: sendingFamilyMessage, error: familyMessagesError, fetchMessages: fetchFamilyMessages, sendMessage: sendFamilyMessage } = useFamilyMessages()
   const { preferences, updateNotifications, updateAccessibility, updatePrivacy, updateRolePreferences, saved } = usePreferences()
   
   const [activeTab, setActiveTab] = useState<TabType>('overview')
@@ -66,6 +70,10 @@ export default function FamilyDashboard() {
   const [editingConnectionId, setEditingConnectionId] = useState<string | null>(null)
   const [editingRelationship, setEditingRelationship] = useState('Parent')
   const [savingRelationship, setSavingRelationship] = useState(false)
+  const [selectedElderId, setSelectedElderId] = useState<string>('')
+  const [elderHealthCheckins, setElderHealthCheckins] = useState<HealthCheckin[]>([])
+  const [loadingElderHealth, setLoadingElderHealth] = useState(false)
+  const [familyChatInput, setFamilyChatInput] = useState('')
   const avatarInputRef = useRef<HTMLInputElement>(null)
 
   const handleAddElder = async () => {
@@ -178,19 +186,6 @@ export default function FamilyDashboard() {
     }
   }, [router.query.tab])
 
-  if (loading) {
-    return (
-      <Layout>
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center">
-            <div className="w-12 h-12 border-4 border-gray-200 border-t-primary-500 rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading your dashboard...</p>
-          </div>
-        </div>
-      </Layout>
-    )
-  }
-
   const fullName = profileData?.first_name || 'User'
 
   const getInitials = () => {
@@ -208,6 +203,65 @@ export default function FamilyDashboard() {
 
   const getElderName = (elderId: string) =>
     elders.find((item) => item.elder_user_id === elderId)?.elder?.first_name || 'Connected Elder'
+
+  const loadElderHealthCheckins = useCallback(async (elderId: string) => {
+    setLoadingElderHealth(true)
+    try {
+      const response = await apiClient.getHealthCheckinsForElder(elderId, 20, 0)
+      if (!response.success) {
+        setElderHealthCheckins([])
+        return
+      }
+      setElderHealthCheckins(Array.isArray(response.data) ? (response.data as HealthCheckin[]) : [])
+    } finally {
+      setLoadingElderHealth(false)
+    }
+  }, [])
+
+  const loadElderFamilyContext = useCallback(async (elderId: string) => {
+    setSelectedElderId(elderId)
+    await Promise.all([
+      loadElderHealthCheckins(elderId),
+      fetchFamilyMessages(elderId),
+    ])
+  }, [fetchFamilyMessages, loadElderHealthCheckins])
+
+  const handleSendFamilyMessage = async () => {
+    if (!selectedElderId) {
+      toast.error('Select an elder first')
+      return
+    }
+    const sent = await sendFamilyMessage(selectedElderId, familyChatInput)
+    if (!sent) {
+      toast.error('Failed to send message')
+      return
+    }
+    setFamilyChatInput('')
+  }
+
+  useEffect(() => {
+    if (!elders.length) {
+      setSelectedElderId('')
+      setElderHealthCheckins([])
+      return
+    }
+    const fallbackElderId = elders[0].elder_user_id
+    const elderIdToLoad = selectedElderId || fallbackElderId
+    loadElderFamilyContext(elderIdToLoad)
+  }, [elders, selectedElderId, loadElderFamilyContext])
+
+  if (loading) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <div className="w-12 h-12 border-4 border-gray-200 border-t-primary-500 rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading your dashboard...</p>
+          </div>
+        </div>
+      </Layout>
+    )
+  }
 
   return (
     <>
@@ -732,38 +786,100 @@ export default function FamilyDashboard() {
           {/* Messages Tab */}
           {activeTab === 'messages' && (
             <Card>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Care Coordination Updates</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Family Care Chat & Health Updates</h3>
               {elders.length === 0 ? (
                 <p className="text-sm text-gray-600">Connect an elder to start receiving message updates.</p>
               ) : requestsLoading ? (
                 <p className="text-sm text-gray-600">Loading updates...</p>
               ) : (
-                <div className="space-y-3">
-                  {elders.map((elderConnection) => {
-                    const elderRequest = recentFamilyRequests.find((request) => request.elder_id === elderConnection.elder_user_id)
-                    return (
-                      <div key={elderConnection.id} className="border border-gray-200 rounded-lg p-4">
-                        <p className="font-semibold text-gray-900">
-                          {elderConnection.elder?.first_name || 'Connected Elder'}
-                        </p>
-                        {elderRequest ? (
-                          <>
-                            <p className="text-sm text-gray-700 mt-1">
-                              Latest request: {elderRequest.activity_type} ({elderRequest.status})
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              Updated: {new Date(elderRequest.requested_date).toLocaleString()}
-                            </p>
-                          </>
+                <div className="space-y-4">
+                  <p className="text-sm text-gray-600">
+                    Family members linked to the same elder can chat here and review recent health check-ins.
+                  </p>
+
+                  <div className="flex flex-wrap gap-2">
+                    {elders.map((elderConnection) => (
+                      <button
+                        key={elderConnection.id}
+                        onClick={() => loadElderFamilyContext(elderConnection.elder_user_id)}
+                        className={`px-3 py-2 rounded-lg border text-sm ${
+                          selectedElderId === elderConnection.elder_user_id
+                            ? 'bg-rose-100 border-rose-300 text-rose-800'
+                            : 'bg-white border-gray-300 text-gray-700'
+                        }`}
+                      >
+                        {elderConnection.elder?.first_name || 'Connected Elder'}
+                      </button>
+                    ))}
+                  </div>
+
+                  {!selectedElderId ? (
+                    <p className="text-sm text-gray-600">Select an elder to view details.</p>
+                  ) : (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                      <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                        <h4 className="text-sm font-semibold text-gray-900 mb-2">Recent Health Check-ins</h4>
+                        {loadingElderHealth ? (
+                          <p className="text-sm text-gray-600">Loading health check-ins...</p>
+                        ) : elderHealthCheckins.length === 0 ? (
+                          <p className="text-sm text-gray-600">No health check-ins submitted yet.</p>
                         ) : (
-                          <p className="text-sm text-gray-600 mt-1">No companion updates yet</p>
-                        )}
-                        {elderConnection.elder?.email && (
-                          <p className="text-xs text-gray-500 mt-1">Contact: {elderConnection.elder.email}</p>
+                          <div className="space-y-2 max-h-72 overflow-y-auto">
+                            {elderHealthCheckins.slice(0, 8).map((checkin) => (
+                              <div key={checkin.id} className="rounded-lg border border-gray-200 bg-white p-3">
+                                <p className="text-sm font-medium text-gray-900">
+                                  {new Date(checkin.checkin_date).toLocaleDateString()} · Mood {checkin.mood}
+                                </p>
+                                <p className="text-xs text-gray-600">
+                                  Energy {checkin.energy_level}/10 · Sleep {checkin.sleep_hours}h · Medications {checkin.medications_taken ? 'Taken' : 'Not taken'}
+                                </p>
+                                {checkin.notes && <p className="text-xs text-gray-600 mt-1">{checkin.notes}</p>}
+                              </div>
+                            ))}
+                          </div>
                         )}
                       </div>
-                    )
-                  })}
+
+                      <div className="border border-gray-200 rounded-lg p-4">
+                        <h4 className="text-sm font-semibold text-gray-900 mb-2">Family Chat</h4>
+                        {familyMessagesError && <p className="text-xs text-red-600 mb-2">{familyMessagesError}</p>}
+                        <div className="max-h-72 overflow-y-auto rounded-lg border border-gray-200 p-3 bg-gray-50">
+                          {familyMessagesLoading ? (
+                            <p className="text-sm text-gray-600">Loading messages...</p>
+                          ) : familyMessages.length === 0 ? (
+                            <p className="text-sm text-gray-600">No messages yet. Start the conversation.</p>
+                          ) : (
+                            <div className="space-y-2">
+                              {familyMessages.map((message) => (
+                                <div key={message.id} className="text-sm">
+                                  <p className="font-medium text-gray-900">
+                                    {message.sender?.first_name || 'User'}
+                                    <span className="ml-2 text-xs text-gray-500 font-normal">
+                                      {new Date(message.created_at).toLocaleString()}
+                                    </span>
+                                  </p>
+                                  <p className="text-gray-700">{message.message_text}</p>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex gap-2 mt-3">
+                          <input
+                            type="text"
+                            value={familyChatInput}
+                            onChange={(e) => setFamilyChatInput(e.target.value)}
+                            placeholder="Message elder and family members..."
+                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500"
+                          />
+                          <Button onClick={handleSendFamilyMessage} disabled={sendingFamilyMessage || !familyChatInput.trim()}>
+                            {sendingFamilyMessage ? 'Sending...' : 'Send'}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </Card>

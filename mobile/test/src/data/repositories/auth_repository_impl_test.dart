@@ -1,15 +1,20 @@
+import 'package:elderconnect_plus/src/data/datasources/remote/edge_functions_service.dart';
 import 'package:elderconnect_plus/src/data/datasources/remote/supabase_service.dart';
 import 'package:elderconnect_plus/src/data/repositories/auth_repository_impl.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   late MockSupabaseAuthService supabaseService;
+  late MockEdgeFunctionsService edgeFunctionsService;
   late AuthRepositoryImpl repository;
 
-  setUp(() {
+  setUp(() async {
+    SharedPreferences.setMockInitialValues({});
     supabaseService = MockSupabaseAuthService();
-    repository = AuthRepositoryImpl(supabaseService);
+    edgeFunctionsService = MockEdgeFunctionsService();
+    repository = AuthRepositoryImpl(supabaseService, edgeFunctionsService);
   });
 
   group('AuthRepositoryImpl', () {
@@ -34,3 +39,5 @@ void main() {
 }
 
 class MockSupabaseAuthService extends Mock implements SupabaseAuthService {}
+
+class MockEdgeFunctionsService extends Mock implements EdgeFunctionsService {}

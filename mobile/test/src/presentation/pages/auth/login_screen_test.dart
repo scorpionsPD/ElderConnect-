@@ -13,7 +13,8 @@ void main() {
       ),
     );
 
-    expect(find.text('Welcome Back'), findsOneWidget);
-    expect(find.text('Sign In'), findsOneWidget);
+    expect(find.text('Welcome back'), findsOneWidget);
+    expect(find.text('Send OTP'), findsOneWidget);
+    expect(find.text('Secure passwordless access'), findsOneWidget);
   });
 }

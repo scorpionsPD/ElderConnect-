@@ -13,7 +13,8 @@ void main() {
       ),
     );
 
-    expect(find.text('Create Your Account'), findsOneWidget);
-    expect(find.text('Create Account'), findsOneWidget);
+    expect(find.text('ElderConnect+ Onboarding'), findsOneWidget);
+    expect(find.text('Guided onboarding'), findsOneWidget);
+    expect(find.text('Next'), findsOneWidget);
   });
 }

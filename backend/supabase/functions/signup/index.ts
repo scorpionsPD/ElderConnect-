@@ -146,6 +146,40 @@ serve(async (req: Request) => {
       )
     }
 
+    if (role === 'FAMILY') {
+      const normalizedEmail = email.trim().toLowerCase()
+      const { data: pendingInvites } = await supabase
+        .from('family_invitations')
+        .select('id, elder_id, relationship, access_level')
+        .eq('family_email', normalizedEmail)
+        .eq('status', 'PENDING')
+
+      for (const invite of pendingInvites || []) {
+        const { error: connectError } = await supabase
+          .from('family_access')
+          .upsert({
+            elder_id: invite.elder_id,
+            family_member_id: userId,
+            relationship: invite.relationship || 'OTHER',
+            access_level: invite.access_level || 'VIEW_ALL',
+            verified: true,
+            verified_by_elder: true,
+            updated_at: new Date().toISOString(),
+          }, { onConflict: 'elder_id,family_member_id' })
+
+        if (!connectError) {
+          await supabase
+            .from('family_invitations')
+            .update({
+              status: 'ACCEPTED',
+              accepted_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', invite.id)
+        }
+      }
+    }
+
     // Create profile record in audit logs
     await supabase
       .from('audit_logs')

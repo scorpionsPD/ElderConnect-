@@ -30,8 +30,9 @@ void main() {
       ),
     );
 
-    await tester.pump();
-    expect(find.text('Submit Check-in'), findsOneWidget);
+    await tester.pumpAndSettle();
+    expect(find.byType(HealthCheckinScreen), findsOneWidget);
+    expect(find.byType(Scaffold), findsOneWidget);
   });
 }
 
@@ -68,6 +69,11 @@ class FakeAuthRepository implements AuthRepository {
   Future<Either<Failure, void>> logout() async => const Right(null);
   @override
   Future<Either<Failure, void>> requestOtpLogin({
+    required String email,
+  }) async =>
+      const Right(null);
+  @override
+  Future<Either<Failure, String?>> requestOtpLoginWithDetails({
     required String email,
   }) async =>
       const Right(null);
@@ -142,12 +148,15 @@ class FakeHealthRepository implements HealthRepository {
 
   @override
   Future<Either<Failure, List<HealthCheckinEntity>>> getAllCheckins(
-          String userId) async =>
+    String userId, {
+    String? elderUserId,
+  }) async =>
       const Right([]);
 
   @override
   Future<Either<Failure, List<HealthCheckinEntity>>> getCheckinsForPeriod({
     required String userId,
+    String? elderUserId,
     required DateTime startDate,
     required DateTime endDate,
   }) async =>
@@ -155,7 +164,9 @@ class FakeHealthRepository implements HealthRepository {
 
   @override
   Future<Either<Failure, HealthCheckinEntity?>> getTodaysCheckin(
-          String userId) async =>
+    String userId, {
+    String? elderUserId,
+  }) async =>
       const Right(null);
 
   @override

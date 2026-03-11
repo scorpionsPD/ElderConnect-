@@ -29,6 +29,12 @@ serve(async (req) => {
       return jsonResponse(400, { success: false, error: 'userId and alertType are required' })
     }
 
+    const { data: triggeringUser } = await supabase
+      .from('users')
+      .select('id, first_name, email, phone_number, emergency_contact_name, emergency_contact_phone')
+      .eq('id', userId)
+      .maybeSingle()
+
     const { data: alert, error: alertError } = await supabase
       .from('emergency_alerts')
       .insert({
@@ -57,6 +63,13 @@ serve(async (req) => {
       triggeredAt: alert.triggered_at,
     })
 
+    const familyNotificationResult = await notifyFamilyAndUserContacts(userId, triggeringUser, {
+      id: alert.id,
+      alertType,
+      description: description || '',
+      triggeredAt: alert.triggered_at,
+    })
+
     await supabase.from('audit_logs').insert({
       user_id: userId,
       action: 'UPDATE',
@@ -75,7 +88,9 @@ serve(async (req) => {
       volunteers_considered: volunteers.length,
       volunteers_notified: notificationResult.totalNotified,
       push_notifications_sent: notificationResult.pushSent,
-      emails_sent: notificationResult.emailsSent,
+      emails_sent: notificationResult.emailsSent + familyNotificationResult.emailsSent,
+      family_emails_sent: familyNotificationResult.emailsSent,
+      emergency_contact_phone: triggeringUser?.emergency_contact_phone || null,
     })
   } catch (error) {
     console.error('Emergency handler error', error)
@@ -102,6 +117,66 @@ async function loadActiveVolunteers() {
 
   if (fallback.error) throw fallback.error
   return fallback.data || []
+}
+
+async function notifyFamilyAndUserContacts(
+  userId: string,
+  triggeringUser: any,
+  payload: { id: string; alertType: string; description: string; triggeredAt: string }
+) {
+  if (!resendApiKey) {
+    return { emailsSent: 0 }
+  }
+
+  const { data: familyRows } = await supabase
+    .from('family_access')
+    .select(`
+      family_member_id,
+      users!family_access_family_member_id_fkey (
+        email,
+        first_name
+      )
+    `)
+    .eq('elder_id', userId)
+    .eq('verified', true)
+
+  const recipientSet = new Set<string>()
+  if (triggeringUser?.email) recipientSet.add(String(triggeringUser.email).toLowerCase())
+
+  for (const row of familyRows || []) {
+    const email = row?.users?.email
+    if (email) recipientSet.add(String(email).toLowerCase())
+  }
+
+  const recipients = Array.from(recipientSet)
+  let emailsSent = 0
+  if (!recipients.length) return { emailsSent }
+
+  await Promise.all(
+    recipients.map(async (to) => {
+      try {
+        const response = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${resendApiKey}`,
+          },
+          body: JSON.stringify({
+            from: emailFrom,
+            to: [to],
+            subject: 'ElderConnect+ Emergency Alert Triggered',
+            html: `<p>An emergency alert was triggered by ${triggeringUser?.first_name || 'an elder'}.</p><p>Type: ${payload.alertType}</p><p>${payload.description || ''}</p><p>Emergency contact: ${triggeringUser?.emergency_contact_name || 'N/A'} (${triggeringUser?.emergency_contact_phone || 'N/A'})</p><p>Time: ${payload.triggeredAt}</p>`,
+          }),
+        })
+
+        if (response.ok) emailsSent += 1
+      } catch {
+        // Best effort notification.
+      }
+    })
+  )
+
+  return { emailsSent }
 }
 
 async function filterVolunteersByDistance(volunteers: any[], latitude?: number, longitude?: number) {

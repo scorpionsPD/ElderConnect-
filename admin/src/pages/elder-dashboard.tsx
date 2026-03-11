@@ -15,7 +15,7 @@ import Badge from '@/components/Badge'
 import Button from '@/components/Button'
 import HealthCheckinModal, { HealthCheckinData } from '@/components/HealthCheckinModal'
 import CompanionRequestModal, { CompanionRequestData } from '@/components/CompanionRequestModal'
-import { useStats, useHealthCheckins, useCompanionRequests, usePreferences, useCompanionMessages } from '@/hooks'
+import { useStats, useHealthCheckins, useCompanionRequests, usePreferences, useCompanionMessages, useFamilyMessages } from '@/hooks'
 import {
   Heart,
   MessageSquare,
@@ -59,6 +59,18 @@ type FamilyConnection = {
   }
 }
 
+type FamilyInvitation = {
+  id: string
+  family_email: string
+  relationship: string
+  access_level: string
+  status: string
+  resend_count: number
+  resend_available: boolean
+  last_sent_at?: string
+  created_at: string
+}
+
 // Placeholder data for when APIs don't return data yet
 const EMPTY_ELDER_PROFILE = {
   id: '',
@@ -95,6 +107,7 @@ export default function ElderDashboard() {
   const { checkins, submitCheckin, fetchCheckins } = useHealthCheckins()
   const { requests, createRequest, fetchRequests, completeRequest } = useCompanionRequests()
   const { messages, loading: messagesLoading, sending: messageSending, error: messagesError, fetchMessages, sendMessage } = useCompanionMessages()
+  const { messages: familyMessages, loading: familyMessagesLoading, sending: sendingFamilyMessage, error: familyMessagesError, fetchMessages: fetchFamilyMessages, sendMessage: sendFamilyMessage } = useFamilyMessages()
   const { preferences, updateNotifications, updateAccessibility, updatePrivacy, updateRolePreferences, saved } = usePreferences()
   
   const [activeTab, setActiveTab] = useState<TabType>('overview')
@@ -111,6 +124,7 @@ export default function ElderDashboard() {
   const [emergencyContactPhone, setEmergencyContactPhone] = useState(user?.emergency_contact_phone || '')
   const [savingEmergencyContact, setSavingEmergencyContact] = useState(false)
   const [familyConnections, setFamilyConnections] = useState<FamilyConnection[]>([])
+  const [familyInvitations, setFamilyInvitations] = useState<FamilyInvitation[]>([])
   const [familyLoading, setFamilyLoading] = useState(false)
   const [familyError, setFamilyError] = useState<string | null>(null)
   const [newFamilyEmail, setNewFamilyEmail] = useState('')
@@ -124,6 +138,9 @@ export default function ElderDashboard() {
   const [selectedCompanionCategories, setSelectedCompanionCategories] = useState<string[]>([])
   const [selectedPreferredTimeSlots, setSelectedPreferredTimeSlots] = useState<string[]>([])
   const [savingCompanionPreferences, setSavingCompanionPreferences] = useState(false)
+  const [familyChatInput, setFamilyChatInput] = useState('')
+  const [triggeringEmergency, setTriggeringEmergency] = useState(false)
+  const [resendingInvitationId, setResendingInvitationId] = useState<string | null>(null)
   const avatarInputRef = useRef<HTMLInputElement>(null)
 
   const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -154,12 +171,16 @@ export default function ElderDashboard() {
       if (!response.success) {
         setFamilyError(response.error || 'Failed to load family connections')
         setFamilyConnections([])
+        setFamilyInvitations([])
         return
       }
       setFamilyConnections(Array.isArray(response.data) ? response.data : [])
+      const invitations = Array.isArray((response as any).invitations) ? (response as any).invitations : []
+      setFamilyInvitations(invitations as FamilyInvitation[])
     } catch (error) {
       setFamilyError('Failed to load family connections')
       setFamilyConnections([])
+      setFamilyInvitations([])
     } finally {
       setFamilyLoading(false)
     }
@@ -209,6 +230,12 @@ export default function ElderDashboard() {
     setSelectedCompanionCategories(Array.isArray(preferences.preferredActivityTypes) ? preferences.preferredActivityTypes : [])
     setSelectedPreferredTimeSlots(Array.isArray(preferences.availabilityDays) ? preferences.availabilityDays : [])
   }, [preferences.preferredActivityTypes, preferences.availabilityDays])
+
+  useEffect(() => {
+    if ((activeTab === 'overview' || activeTab === 'family') && user?.id) {
+      fetchFamilyMessages(user.id)
+    }
+  }, [activeTab, user?.id, fetchFamilyMessages])
 
   const toggleValue = (current: string[], value: string, set: (next: string[]) => void) => {
     if (current.includes(value)) {
@@ -349,6 +376,49 @@ export default function ElderDashboard() {
     }
   }
 
+  const handleEmergencyAlert = async () => {
+    const phone = (profileData?.emergency_contact_phone || '').trim()
+    if (!phone) {
+      toast.error('Add an emergency contact phone first')
+      setActiveTab('settings')
+      return
+    }
+
+    setTriggeringEmergency(true)
+    try {
+      const response = await apiClient.triggerEmergencyAlert(
+        'HEALTH_EMERGENCY',
+        'Emergency alert triggered from elder dashboard'
+      )
+
+      if (!response.success) {
+        toast.error(response.error || 'Failed to trigger emergency alert')
+        return
+      }
+
+      toast.success('Emergency alert sent. Calling emergency contact now.')
+      if (typeof window !== 'undefined') {
+        const dialNumber = phone.replace(/\s+/g, '')
+        window.location.href = `tel:${dialNumber}`
+      }
+    } finally {
+      setTriggeringEmergency(false)
+    }
+  }
+
+  const handleSendFamilyMessage = async () => {
+    if (!user?.id) {
+      toast.error('Unable to send message')
+      return
+    }
+    const sent = await sendFamilyMessage(user.id, familyChatInput)
+    if (!sent) {
+      toast.error('Failed to send family message')
+      return
+    }
+    setFamilyChatInput('')
+  }
+
   const handleAddFamilyMember = async () => {
     if (!newFamilyEmail.trim()) {
       toast.error('Please enter family member email')
@@ -361,15 +431,20 @@ export default function ElderDashboard() {
         newFamilyRelationship,
         newFamilyAccessLevel
       )
-      if (!response.success || !response.data) {
+      if (!response.success) {
         toast.error(response.error || 'Failed to add family member')
         return
       }
-      setFamilyConnections([response.data as FamilyConnection, ...familyConnections])
+
+      if (response.data) {
+        setFamilyConnections([response.data as FamilyConnection, ...familyConnections])
+      } else if ((response as any).invitation) {
+        setFamilyInvitations((prev) => [((response as any).invitation as FamilyInvitation), ...prev])
+      }
       setNewFamilyEmail('')
       setNewFamilyRelationship('CHILD')
       setNewFamilyAccessLevel('VIEW_ALL')
-      toast.success('Family member added successfully')
+      toast.success(response.message || 'Family invitation sent successfully')
     } finally {
       setAddingFamilyMember(false)
     }
@@ -419,6 +494,27 @@ export default function ElderDashboard() {
     }
     setFamilyConnections((prev) => prev.filter((item) => item.id !== connectionId))
     toast.success('Family member removed')
+  }
+
+  const handleResendInvitation = async (invitationId: string) => {
+    setResendingInvitationId(invitationId)
+    try {
+      const response = await apiClient.resendElderFamilyInvitation(invitationId)
+      if (!response.success) {
+        toast.error(response.error || 'Failed to resend invitation')
+        return
+      }
+
+      const updatedInvite = (response as any).invitation as FamilyInvitation | undefined
+      if (updatedInvite) {
+        setFamilyInvitations((prev) =>
+          prev.map((item) => (item.id === invitationId ? updatedInvite : item))
+        )
+      }
+      toast.success(response.message || 'Invitation resent')
+    } finally {
+      setResendingInvitationId(null)
+    }
   }
 
   const handleSaveCompanionPreferences = async () => {
@@ -480,6 +576,24 @@ export default function ElderDashboard() {
   }
 
   const canChatOnRequest = (status: string) => ['ACCEPTED', 'IN_PROGRESS', 'COMPLETED'].includes(status)
+  const formatPreferredStart = (preferredStart?: string, requestedDate?: string) => {
+    if (!preferredStart) return null
+
+    const timeOnlyMatch = preferredStart.match(/^(\d{2}):(\d{2})(?::(\d{2}))?$/)
+    if (timeOnlyMatch) {
+      const baseDate = requestedDate ? new Date(requestedDate) : null
+      if (baseDate && !Number.isNaN(baseDate.getTime())) {
+        const [, hh, mm, ss = '00'] = timeOnlyMatch
+        baseDate.setHours(Number(hh), Number(mm), Number(ss), 0)
+        return baseDate.toLocaleString()
+      }
+      return preferredStart
+    }
+
+    const parsed = new Date(preferredStart)
+    if (Number.isNaN(parsed.getTime())) return preferredStart
+    return parsed.toLocaleString()
+  }
   const completionNeedsElder = requests.filter(
     (r) => (r.status === 'ACCEPTED' || r.status === 'IN_PROGRESS') && r.completion?.waiting_for === 'ELDER'
   ).length
@@ -612,10 +726,65 @@ export default function ElderDashboard() {
                     <p className="text-sm text-gray-600">No recent activity yet</p>
                   </div>
                 </Card>
+
+                <Card>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3">Family Group Chat</h3>
+                  <p className="text-sm text-gray-600 mb-3">
+                    Share updates with invited family members from your dashboard.
+                  </p>
+                  {familyMessagesError && <p className="text-sm text-red-600 mb-2">{familyMessagesError}</p>}
+                  <div className="max-h-64 overflow-y-auto border border-gray-200 rounded-lg p-3 bg-gray-50">
+                    {familyMessagesLoading ? (
+                      <p className="text-sm text-gray-600">Loading family messages...</p>
+                    ) : familyMessages.length === 0 ? (
+                      <p className="text-sm text-gray-600">No family messages yet.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {familyMessages.map((message) => (
+                          <div key={message.id} className="text-sm">
+                            <p className="font-medium text-gray-900">
+                              {message.sender?.first_name || 'User'}
+                              <span className="ml-2 text-xs text-gray-500 font-normal">
+                                {new Date(message.created_at).toLocaleString()}
+                              </span>
+                            </p>
+                            <p className="text-gray-700">{message.message_text}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex gap-2 mt-3">
+                    <input
+                      type="text"
+                      value={familyChatInput}
+                      onChange={(e) => setFamilyChatInput(e.target.value)}
+                      placeholder="Send message to family..."
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    />
+                    <Button onClick={handleSendFamilyMessage} disabled={sendingFamilyMessage || !familyChatInput.trim()}>
+                      {sendingFamilyMessage ? 'Sending...' : 'Send'}
+                    </Button>
+                  </div>
+                </Card>
               </div>
 
               {/* Sidebar */}
               <div className="space-y-6">
+                <Card className="border-red-200 bg-red-50">
+                  <h3 className="text-lg font-semibold text-red-800 mb-2">Emergency Help</h3>
+                  <p className="text-sm text-red-700 mb-3">
+                    Press once to alert all family members by email and immediately open a call to your emergency contact.
+                  </p>
+                  <Button
+                    className="w-full bg-red-600 hover:bg-red-700"
+                    onClick={handleEmergencyAlert}
+                    disabled={triggeringEmergency}
+                  >
+                    {triggeringEmergency ? 'Triggering Alert...' : 'Emergency Alert & Call'}
+                  </Button>
+                </Card>
+
                 {/* Emergency Contacts */}
                 <Card>
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Emergency Contacts</h3>
@@ -1074,7 +1243,7 @@ export default function ElderDashboard() {
                           {request.preferred_time_start && (
                             <div className="flex items-center gap-1">
                               <Clock className="w-3 h-3" />
-                              {new Date(request.preferred_time_start).toLocaleDateString()}
+                              {formatPreferredStart(request.preferred_time_start, request.requested_date)}
                             </div>
                           )}
                           {request.location_latitude && request.location_longitude && (
@@ -1235,6 +1404,40 @@ export default function ElderDashboard() {
               </Card>
 
               <Card>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Invited Family Members</h3>
+                {familyInvitations.length === 0 ? (
+                  <p className="text-sm text-gray-600">No pending invitations.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {familyInvitations.map((invite) => (
+                      <div key={invite.id} className="border border-amber-200 bg-amber-50 rounded-lg p-3">
+                        <p className="font-medium text-gray-900">{invite.family_email}</p>
+                        <p className="text-xs text-gray-600">
+                          {invite.relationship} · {invite.access_level} · Sent {new Date(invite.created_at).toLocaleDateString()}
+                        </p>
+                        <p className="text-xs text-gray-600 mt-1">
+                          Resend used: {invite.resend_count}/1
+                        </p>
+                        <div className="mt-2">
+                          <Button
+                            variant="secondary"
+                            onClick={() => handleResendInvitation(invite.id)}
+                            disabled={!invite.resend_available || resendingInvitationId === invite.id}
+                          >
+                            {resendingInvitationId === invite.id
+                              ? 'Resending...'
+                              : invite.resend_available
+                                ? 'Resend Invitation'
+                                : 'Resend Limit Reached'}
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </Card>
+
+              <Card>
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold text-gray-900">Family Connections</h3>
                   <Button variant="secondary" onClick={fetchFamilyConnections} disabled={familyLoading}>
@@ -1314,6 +1517,7 @@ export default function ElderDashboard() {
                   </div>
                 )}
               </Card>
+
             </div>
           )}
         </div>

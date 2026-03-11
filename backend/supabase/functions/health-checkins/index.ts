@@ -85,25 +85,57 @@ serve(async (req: Request) => {
     )
   }
 
-  // Only elders can use health checkin
-  if (user.role !== 'ELDER') {
-    return new Response(
-      JSON.stringify({ success: false, error: 'Only elders can submit health check-ins' }),
-      { status: 403, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
-    )
-  }
-
   // GET /health-checkins - Get user's health check-ins
   if (req.method === 'GET') {
     try {
       const url = new URL(req.url)
       const limit = url.searchParams.get('limit') ? parseInt(url.searchParams.get('limit')!) : 30
       const offset = url.searchParams.get('offset') ? parseInt(url.searchParams.get('offset')!) : 0
+      const elderUserIdParam = url.searchParams.get('elder_user_id')
+      let targetUserId = userId
+
+      if (user.role === 'FAMILY') {
+        if (!elderUserIdParam) {
+          return new Response(
+            JSON.stringify({ success: false, error: 'elder_user_id is required for family access' }),
+            { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+          )
+        }
+
+        const { data: connection, error: connectionError } = await supabase
+          .from('family_access')
+          .select('id')
+          .eq('elder_id', elderUserIdParam)
+          .eq('family_member_id', userId)
+          .eq('verified', true)
+          .maybeSingle()
+
+        if (connectionError) {
+          return new Response(
+            JSON.stringify({ success: false, error: 'Failed to validate family access' }),
+            { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+          )
+        }
+
+        if (!connection) {
+          return new Response(
+            JSON.stringify({ success: false, error: 'You do not have access to this elder health data' }),
+            { status: 403, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+          )
+        }
+
+        targetUserId = elderUserIdParam
+      } else if (user.role !== 'ELDER') {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Only elders and invited family members can view health check-ins' }),
+          { status: 403, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+        )
+      }
 
       const { data: checkins, error } = await supabase
         .from('health_checkins')
         .select('*')
-        .eq('user_id', userId)
+        .eq('user_id', targetUserId)
         .order('checkin_date', { ascending: false })
         .range(offset, offset + limit - 1)
 
@@ -119,7 +151,7 @@ serve(async (req: Request) => {
       const { count } = await supabase
         .from('health_checkins')
         .select('id', { count: 'exact' })
-        .eq('user_id', userId)
+        .eq('user_id', targetUserId)
 
       const normalizedCheckins = ((checkins || []) as HealthCheckinRow[]).map((row) => mapDbRowToApi(row))
 
@@ -148,6 +180,13 @@ serve(async (req: Request) => {
   // POST /health-checkins - Submit health check-in
   if (req.method === 'POST') {
     try {
+      if (user.role !== 'ELDER') {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Only elders can submit health check-ins' }),
+          { status: 403, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+        )
+      }
+
       const body: CreateHealthCheckinBody = await req.json()
 
       // Validate required fields

@@ -58,6 +58,24 @@ export const useStats = () => {
     activitiesThisMonth: 0
   })
 
+  const parsePreferredStartDate = (request: { preferred_time_start?: string; requested_date: string }) => {
+    const raw = request.preferred_time_start
+    if (!raw) return null
+
+    // Backend may store preferred time as HH:mm:ss in TIME columns.
+    const timeOnlyMatch = raw.match(/^(\d{2}):(\d{2})(?::(\d{2}))?$/)
+    if (timeOnlyMatch) {
+      const baseDate = new Date(request.requested_date)
+      if (Number.isNaN(baseDate.getTime())) return null
+      const [, hh, mm, ss = '00'] = timeOnlyMatch
+      baseDate.setHours(Number(hh), Number(mm), Number(ss), 0)
+      return baseDate
+    }
+
+    const parsed = new Date(raw)
+    return Number.isNaN(parsed.getTime()) ? null : parsed
+  }
+
   // Calculate stats from data
   useEffect(() => {
     const calculateStats = () => {
@@ -70,11 +88,8 @@ export const useStats = () => {
       // Filter upcoming visits (accepted requests with future dates)
       const upcoming = requests.filter(r => {
         if (r.status !== 'ACCEPTED' && r.status !== 'IN_PROGRESS') return false
-        if (r.preferred_time_start) {
-          const visitDate = new Date(r.preferred_time_start)
-          return visitDate > new Date()
-        }
-        return false
+        const visitDate = parsePreferredStartDate(r)
+        return !!visitDate && visitDate > new Date()
       }).length
 
       // Health check-in stats

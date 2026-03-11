@@ -73,6 +73,11 @@ class FakeAuthRepository implements AuthRepository {
   }) async =>
       const Right(null);
   @override
+  Future<Either<Failure, String?>> requestOtpLoginWithDetails({
+    required String email,
+  }) async =>
+      const Right(null);
+  @override
   Future<Either<Failure, UserEntity>> verifyOtpLogin({
     required String email,
     required String token,

@@ -1,0 +1,324 @@
+{
+  "info": {
+    "_postman_id": "8f07df6f-e0d4-4b76-a2ac-77a8a7e11140",
+    "name": "ElderConnect Auth OTP",
+    "description": "OTP auth flow for ElderConnect Supabase Edge Functions: send-otp -> verify-otp -> signup (if new user).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1) Send OTP",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "apikey",
+            "value": "{{anonKey}}"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{anonKey}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{email}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/send-otp",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "send-otp"
+          ]
+        },
+        "description": "Sends OTP to the email. In non-production setups, response may include `otp` for testing."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 200', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const data = pm.response.json();",
+              "",
+              "if (data.otp) {",
+              "  pm.collectionVariables.set('otp', String(data.otp));",
+              "}",
+              "",
+              "pm.test('Has success true', function () {",
+              "  pm.expect(data.success).to.eql(true);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "2) Verify OTP",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "apikey",
+            "value": "{{anonKey}}"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{anonKey}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{email}}\",\n  \"code\": \"{{otp}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/verify-otp",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "verify-otp"
+          ]
+        },
+        "description": "Verifies OTP. For unregistered users, response includes `is_new_user: true`."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 200', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const data = pm.response.json();",
+              "",
+              "if (data.token) pm.collectionVariables.set('token', String(data.token));",
+              "if (data.user_id) pm.collectionVariables.set('userId', String(data.user_id));",
+              "if (typeof data.is_new_user !== 'undefined') pm.collectionVariables.set('isNewUser', String(data.is_new_user));",
+              "",
+              "pm.test('Has success true', function () {",
+              "  pm.expect(data.success).to.eql(true);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "3) Signup (run only if is_new_user=true)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "apikey",
+            "value": "{{anonKey}}"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{anonKey}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{email}}\",\n  \"role\": \"{{role}}\",\n  \"first_name\": \"{{firstName}}\",\n  \"last_name\": \"{{lastName}}\",\n  \"city\": \"{{city}}\",\n  \"postcode\": \"{{postcode}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/signup",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "signup"
+          ]
+        },
+        "description": "Creates a new user after OTP verification indicates new user flow."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 200 or 201', function () {",
+              "  pm.expect([200, 201]).to.include(pm.response.code);",
+              "});",
+              "",
+              "const data = pm.response.json();",
+              "pm.test('Has success true', function () {",
+              "  pm.expect(data.success).to.eql(true);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "4) Send OTP again (existing user)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "apikey",
+            "value": "{{anonKey}}"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{anonKey}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{email}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/send-otp",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "send-otp"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 200', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "const data = pm.response.json();",
+              "if (data.otp) pm.collectionVariables.set('otp', String(data.otp));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "5) Verify OTP again (existing user)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "apikey",
+            "value": "{{anonKey}}"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{anonKey}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{email}}\",\n  \"code\": \"{{otp}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/verify-otp",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "verify-otp"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 200', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "const data = pm.response.json();",
+              "pm.test('Existing user should include user_id', function () {",
+              "  pm.expect(data.user_id).to.be.a('string').and.not.empty;",
+              "});"
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://kydzdwzmuibwfohrdcmu.supabase.co/functions/v1"
+    },
+    {
+      "key": "anonKey",
+      "value": "REPLACE_WITH_SUPABASE_ANON_KEY"
+    },
+    {
+      "key": "email",
+      "value": "your_email@example.com"
+    },
+    {
+      "key": "otp",
+      "value": "1234"
+    },
+    {
+      "key": "role",
+      "value": "ELDER"
+    },
+    {
+      "key": "firstName",
+      "value": "Pradeep"
+    },
+    {
+      "key": "lastName",
+      "value": "Dahiya"
+    },
+    {
+      "key": "city",
+      "value": "London"
+    },
+    {
+      "key": "postcode",
+      "value": "SW1A 1AA"
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "userId",
+      "value": ""
+    },
+    {
+      "key": "isNewUser",
+      "value": ""
+    }
+  ]
+}

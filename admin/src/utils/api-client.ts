@@ -186,6 +186,7 @@ class ApiClient {
           : payload
 
       return {
+        ...(payload && typeof payload === 'object' ? payload : {}),
         success: payload?.success ?? true,
         data: normalizedData,
         message: payload?.message,
@@ -493,6 +494,17 @@ class ApiClient {
     })
   }
 
+  async resendElderFamilyInvitation(invitationId: string): Promise<ApiResponse> {
+    const headers: HeadersInit = this.attachUserIdentityHeaders(this.getServiceHeaders())
+    return this.request('/elder-family-members', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        resend_invitation_id: invitationId
+      })
+    })
+  }
+
   async getCompanionMessages(requestId: string): Promise<ApiResponse> {
     const headers: HeadersInit = this.attachUserIdentityHeaders(this.getServiceHeaders())
     return this.request(`/companion-messages?request_id=${encodeURIComponent(requestId)}`, {
@@ -556,6 +568,21 @@ class ApiClient {
     })
   }
 
+  async getHealthCheckinsForElder(
+    elderUserId: string,
+    limit: number = 30,
+    offset: number = 0
+  ): Promise<ApiResponse> {
+    const headers: HeadersInit = this.attachUserIdentityHeaders(this.getServiceHeaders())
+    return this.request(
+      `/health-checkins?limit=${limit}&offset=${offset}&elder_user_id=${encodeURIComponent(elderUserId)}`,
+      {
+        method: 'GET',
+        headers
+      }
+    )
+  }
+
   /**
    * Submit health check-in
    */
@@ -600,6 +627,45 @@ class ApiClient {
       method: 'PUT',
       headers,
       body: JSON.stringify(updates)
+    })
+  }
+
+  async getFamilyMessages(elderUserId: string): Promise<ApiResponse> {
+    const headers: HeadersInit = this.attachUserIdentityHeaders(this.getServiceHeaders())
+    return this.request(`/family-messages?elder_user_id=${encodeURIComponent(elderUserId)}`, {
+      method: 'GET',
+      headers
+    })
+  }
+
+  async sendFamilyMessage(elderUserId: string, messageText: string): Promise<ApiResponse> {
+    const headers: HeadersInit = this.attachUserIdentityHeaders(this.getServiceHeaders())
+    return this.request(`/family-messages?elder_user_id=${encodeURIComponent(elderUserId)}`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        message_text: messageText
+      })
+    })
+  }
+
+  async triggerEmergencyAlert(
+    alertType: 'HEALTH_EMERGENCY' | 'SECURITY_THREAT' | 'ACCIDENT' | 'OTHER',
+    description?: string,
+    latitude?: number,
+    longitude?: number
+  ): Promise<ApiResponse> {
+    const headers: HeadersInit = this.attachUserIdentityHeaders(this.getServiceHeaders())
+    return this.request('/emergency-handler', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        userId: this.getEffectiveUserId(),
+        alertType,
+        description,
+        latitude,
+        longitude
+      })
     })
   }
 }

@@ -15,3 +15,6 @@ export type { UserPreferences } from './usePreferences'
 
 export { useCompanionMessages } from './useCompanionMessages'
 export type { CompanionMessage } from './useCompanionMessages'
+
+export { useFamilyMessages } from './useFamilyMessages'
+export type { FamilyMessage } from './useFamilyMessages'
