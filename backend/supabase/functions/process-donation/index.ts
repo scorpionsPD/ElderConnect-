@@ -43,10 +43,12 @@ serve(async (req) => {
     await supabase
       .from('audit_logs')
       .insert({
+        user_id: null,
         action: 'UPDATE',
-        resource_type: 'DONATION',
-        resource_id: donationId,
-        changes: {
+        table_name: 'donations',
+        record_id: donationId,
+        old_values: null,
+        new_values: {
           status,
           stripe_payment_intent_id: paymentIntentId || null,
           amount: amount || null,

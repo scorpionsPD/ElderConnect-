@@ -9,8 +9,11 @@ import Tabs from '@/components/Tabs'
 import Button from '@/components/Button'
 import Input from '@/components/Input'
 import AddressAutocomplete from '@/components/AddressAutocomplete'
+import { reverseGeocodeCoordinates } from '@/utils/address-search'
 import { useToast } from '@/contexts/ToastContext'
 import { useAuth } from '@/contexts/AuthContext'
+import { supabase } from '@/utils/supabase'
+import apiClient from '@/utils/api-client'
 import { 
   User, 
   Bell, 
@@ -35,15 +38,24 @@ export default function SettingsPage() {
   const toast = useToast()
   const [activeTab, setActiveTab] = useState<TabType>('profile')
   const [loading, setLoading] = useState(false)
-  const { user, updateUser } = useAuth()
+  const [locating, setLocating] = useState(false)
+  const { user, updateUserProfile } = useAuth()
+
+  // Password change state
+  const [passwordData, setPasswordData] = useState({ newPassword: '', confirmPassword: '' })
+  const [passwordLoading, setPasswordLoading] = useState(false)
+  const [deleteLoading, setDeleteLoading] = useState(false)
 
   // Profile settings state
   const [profileData, setProfileData] = useState({
     fullName: user ? user.first_name || '' : '',
     email: user?.email || '',
     phone: user?.phone_number || '',
-    address: '',
-    dateOfBirth: '',
+    address: [user?.address_line_1, user?.city, user?.postcode].filter(Boolean).join(', '),
+    addressLine1: user?.address_line_1 || '',
+    city: user?.city || '',
+    postcode: user?.postcode || '',
+    dateOfBirth: user?.date_of_birth || '',
     bio: user?.bio || '',
     profilePictureUrl: user?.profile_picture_url || '',
   })
@@ -55,12 +67,40 @@ export default function SettingsPage() {
       fullName: user.first_name || '',
       email: user.email || '',
       phone: user.phone_number || '',
-      address: '',
-      dateOfBirth: '',
+      address: [user.address_line_1, user.city, user.postcode].filter(Boolean).join(', '),
+      addressLine1: user.address_line_1 || '',
+      city: user.city || '',
+      postcode: user.postcode || '',
+      dateOfBirth: user.date_of_birth || '',
       bio: user.bio || '',
       profilePictureUrl: user.profile_picture_url || '',
     })
     setAvatarPreview(user.profile_picture_url || '')
+  }, [user])
+
+  useEffect(() => {
+    if (!user) return
+    apiClient.getUserPreferences().then((res) => {
+      if (res.success && res.data) {
+        const d = res.data
+        setNotificationSettings((prev) => ({
+          ...prev,
+          emailNotifications: d.emailNotifications ?? prev.emailNotifications,
+          pushNotifications: d.pushNotifications ?? prev.pushNotifications,
+          smsNotifications: d.smsNotifications ?? prev.smsNotifications,
+        }))
+        setAccessibilitySettings((prev) => ({
+          ...prev,
+          highContrast: d.accessibilityHighContrast ?? prev.highContrast,
+          screenReader: d.accessibilityVoiceEnabled ?? prev.screenReader,
+          language: d.preferredLanguage ?? prev.language,
+        }))
+        setPrivacySettings((prev) => ({
+          ...prev,
+          dataSharing: d.dataSharingConsent ?? prev.dataSharing,
+        }))
+      }
+    }).catch(() => { /* use defaults */ })
   }, [user])
 
   // Notification settings state
@@ -131,57 +171,196 @@ export default function SettingsPage() {
     reader.readAsDataURL(file)
   }
 
-  const handleProfileSave = () => {
+  const handleUseCurrentLocation = async () => {
+    if (typeof window === 'undefined' || !navigator.geolocation) {
+      toast.error('Location is not supported in this browser.')
+      return
+    }
+
+    setLocating(true)
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const suggestion = await reverseGeocodeCoordinates(
+            position.coords.latitude,
+            position.coords.longitude
+          )
+
+          if (!suggestion) {
+            toast.error('Unable to resolve your current address.')
+            return
+          }
+
+          const addressLine1 = suggestion.addressLine1 || suggestion.formattedAddress.split(',')[0]?.trim() || ''
+          const city = suggestion.city || ''
+          const postcode = suggestion.postcode || ''
+
+          setProfileData((prev) => ({
+            ...prev,
+            address: suggestion.formattedAddress,
+            addressLine1,
+            city,
+            postcode,
+          }))
+          toast.success('Current address loaded.')
+        } finally {
+          setLocating(false)
+        }
+      },
+      (error) => {
+        setLocating(false)
+        if (error.code === error.PERMISSION_DENIED) {
+          toast.error('Location permission was denied.')
+          return
+        }
+        if (error.code === error.POSITION_UNAVAILABLE) {
+          toast.error('Current location is unavailable.')
+          return
+        }
+        if (error.code === error.TIMEOUT) {
+          toast.error('Location request timed out.')
+          return
+        }
+        toast.error('Unable to fetch your current location.')
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    )
+  }
+
+  const handleProfileSave = async () => {
     setLoading(true)
-    updateUser({
-      first_name: profileData.fullName,
-      email: profileData.email,
-      phone_number: profileData.phone,
-      bio: profileData.bio,
-      profile_picture_url: profileData.profilePictureUrl || avatarPreview || '',
-    })
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      const { firstName, lastName } = splitFullName(profileData.fullName)
+      await updateUserProfile({
+        first_name: firstName,
+        last_name: lastName,
+        email: profileData.email,
+        phone_number: profileData.phone,
+        bio: profileData.bio,
+        date_of_birth: profileData.dateOfBirth,
+        address_line_1: profileData.addressLine1,
+        city: profileData.city,
+        postcode: profileData.postcode,
+        profile_picture_url: profileData.profilePictureUrl || avatarPreview || '',
+      })
       toast.success('Profile updated successfully!')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to update profile.')
+    } finally {
       setLoading(false)
-    }, 500)
+    }
   }
 
-  const handleNotificationsSave = () => {
+  const handleNotificationsSave = async () => {
     setLoading(true)
-    setTimeout(() => {
-      toast.success('Notification preferences updated!')
+    try {
+      const res = await apiClient.updateUserPreferences({
+        emailNotifications: notificationSettings.emailNotifications,
+        pushNotifications: notificationSettings.pushNotifications,
+        smsNotifications: notificationSettings.smsNotifications,
+      })
+      if (res.success) {
+        toast.success('Notification preferences updated!')
+      } else {
+        toast.error(res.error || 'Failed to save notification preferences.')
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to save notification preferences.')
+    } finally {
       setLoading(false)
-    }, 500)
+    }
   }
 
-  const handleAccessibilitySave = () => {
+  const handleAccessibilitySave = async () => {
     setLoading(true)
-    setTimeout(() => {
-      toast.success('Accessibility settings updated!')
+    try {
+      const res = await apiClient.updateUserPreferences({
+        accessibilityHighContrast: accessibilitySettings.highContrast,
+        accessibilityVoiceEnabled: accessibilitySettings.screenReader,
+        preferredLanguage: accessibilitySettings.language,
+      })
+      if (res.success) {
+        toast.success('Accessibility settings updated!')
+      } else {
+        toast.error(res.error || 'Failed to save accessibility settings.')
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to save accessibility settings.')
+    } finally {
       setLoading(false)
-    }, 500)
+    }
   }
 
-  const handlePrivacySave = () => {
+  const handlePrivacySave = async () => {
     setLoading(true)
-    setTimeout(() => {
-      toast.success('Privacy settings updated!')
+    try {
+      const res = await apiClient.updateUserPreferences({
+        dataSharingConsent: privacySettings.dataSharing,
+      })
+      if (res.success) {
+        toast.success('Privacy settings updated!')
+      } else {
+        toast.error(res.error || 'Failed to save privacy settings.')
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to save privacy settings.')
+    } finally {
       setLoading(false)
-    }, 500)
+    }
   }
 
-  const handleChangePassword = () => {
-    toast.info('Password change functionality coming soon!')
+  const handleChangePassword = async () => {
+    if (!passwordData.newPassword || passwordData.newPassword.length < 8) {
+      toast.error('Password must be at least 8 characters.')
+      return
+    }
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      toast.error('Passwords do not match.')
+      return
+    }
+    setPasswordLoading(true)
+    try {
+      const { error } = await supabase.auth.updateUser({ password: passwordData.newPassword })
+      if (error) throw error
+      setPasswordData({ newPassword: '', confirmPassword: '' })
+      toast.success('Password updated successfully!')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to update password.')
+    } finally {
+      setPasswordLoading(false)
+    }
   }
 
   const handleExportData = () => {
     toast.success('Data export initiated. You will receive an email shortly.')
   }
 
-  const handleDeleteAccount = () => {
-    if (confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
-      toast.error('Account deletion functionality coming soon!')
+  const handleDeleteAccount = async () => {
+    if (!confirm('Are you sure you want to delete your account? This action cannot be undone.')) return
+    if (!user?.id) { toast.error('User session not found. Please log in again.'); return }
+    setDeleteLoading(true)
+    try {
+      const token = localStorage.getItem('auth_token')
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1`
+      const response = await fetch(`${apiBase}/gdpr-delete-user`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+        },
+        body: JSON.stringify({ userId: user.id }),
+      })
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error || 'Deletion failed')
+      toast.success('Your account has been scheduled for deletion. You will be logged out.')
+      await supabase.auth.signOut()
+      localStorage.clear()
+      window.location.href = '/'
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to delete account.')
+    } finally {
+      setDeleteLoading(false)
     }
   }
 
@@ -291,8 +470,33 @@ export default function SettingsPage() {
                         <AddressAutocomplete
                           value={profileData.address}
                           onChange={(value) => setProfileData({ ...profileData, address: value })}
+                          onSelect={(suggestion) =>
+                            setProfileData((prev) => ({
+                              ...prev,
+                              address: suggestion.formattedAddress,
+                              addressLine1: suggestion.addressLine1 || suggestion.formattedAddress.split(',')[0]?.trim() || '',
+                              city: suggestion.city || prev.city,
+                              postcode: suggestion.postcode || prev.postcode,
+                            }))
+                          }
                           placeholder="Search your address or postcode"
                         />
+                        <div className="mt-3 flex flex-wrap gap-3">
+                          <Button
+                            text={locating ? 'Locating...' : 'Use Current Location'}
+                            icon={<MapPin className="h-4 w-4" />}
+                            onClick={handleUseCurrentLocation}
+                            loading={locating}
+                            variant="secondary"
+                          />
+                          {(profileData.addressLine1 || profileData.city || profileData.postcode) && (
+                            <p className="text-sm text-gray-600">
+                              {[profileData.addressLine1, profileData.city, profileData.postcode]
+                                .filter(Boolean)
+                                .join(', ')}
+                            </p>
+                          )}
+                        </div>
                       </div>
 
                       <div className="md:col-span-2">
@@ -631,11 +835,33 @@ export default function SettingsPage() {
                     <h3 className="text-lg font-semibold text-gray-900 mb-4">Account Security</h3>
                     
                     <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+                        <input
+                          type="password"
+                          value={passwordData.newPassword}
+                          onChange={(e) => setPasswordData((p) => ({ ...p, newPassword: e.target.value }))}
+                          placeholder="At least 8 characters"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Confirm New Password</label>
+                        <input
+                          type="password"
+                          value={passwordData.confirmPassword}
+                          onChange={(e) => setPasswordData((p) => ({ ...p, confirmPassword: e.target.value }))}
+                          placeholder="Repeat new password"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                        />
+                      </div>
                       <Button
-                        text="Change Password"
+                        text={passwordLoading ? 'Updating...' : 'Change Password'}
                         icon={<Shield className="h-4 w-4" />}
                         variant="secondary"
                         onClick={handleChangePassword}
+                        loading={passwordLoading}
+                        disabled={!passwordData.newPassword || !passwordData.confirmPassword}
                       />
                     </div>
                   </div>
@@ -668,11 +894,12 @@ export default function SettingsPage() {
                         Permanently delete your account and all associated data. This action cannot be undone.
                       </p>
                       <Button
-                        text="Delete My Account"
+                        text={deleteLoading ? 'Deleting...' : 'Delete My Account'}
                         icon={<Trash2 className="h-4 w-4" />}
                         variant="danger"
                         size="sm"
                         onClick={handleDeleteAccount}
+                        loading={deleteLoading}
                       />
                     </div>
                   </div>

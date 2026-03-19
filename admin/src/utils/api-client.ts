@@ -668,6 +668,75 @@ class ApiClient {
       })
     })
   }
+
+  // ============================================================================
+  // DONATION APIs
+  // ============================================================================
+
+  /**
+   * Create Stripe checkout session (web flow)
+   */
+  async createDonationCheckoutSession(
+    amount: number,
+    currency: string,
+    donationType: 'ONE_TIME' | 'MONTHLY_SUBSCRIPTION',
+    successUrl: string,
+    cancelUrl: string,
+    options?: {
+      donorEmail?: string
+      donorMessage?: string
+      isAnonymous?: boolean
+      donorId?: string
+    }
+  ): Promise<ApiResponse> {
+    return this.request('/create-donation-checkout-session', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '',
+        Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? ''}`
+      },
+      body: JSON.stringify({
+        amount,
+        currency,
+        donationType,
+        successUrl,
+        cancelUrl,
+        ...options
+      })
+    })
+  }
+
+  /**
+   * Confirm a Stripe checkout session and update donation status
+   */
+  async confirmDonationSession(donationId: string, sessionId: string): Promise<ApiResponse> {
+    return this.request('/confirm-donation-session', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '',
+        Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? ''}`
+      },
+      body: JSON.stringify({ donationId, sessionId })
+    })
+  }
+
+  // ============================================================================
+  // GDPR / ACCOUNT DELETION
+  // ============================================================================
+
+  /**
+   * Permanently delete the current user's account (GDPR right to erasure)
+   */
+  async deleteAccount(): Promise<ApiResponse> {
+    const headers: HeadersInit = this.attachUserIdentityHeaders(this.getServiceHeaders())
+    return this.request('/gdpr-delete-user', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ userId: this.getEffectiveUserId() })
+    })
+  }
 }
 
 // Create and export singleton instance

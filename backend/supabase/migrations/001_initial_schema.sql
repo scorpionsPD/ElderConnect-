@@ -238,25 +238,6 @@ CREATE TABLE messages (
     CONSTRAINT different_users CHECK (sender_id != recipient_id)
 );
 
--- Video Call Scheduling
-CREATE TABLE video_call_sessions (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    initiator_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    recipient_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    call_type VARCHAR(20) NOT NULL DEFAULT 'ONE_TO_ONE', -- 'ONE_TO_ONE', 'GROUP'
-    scheduled_at TIMESTAMP WITH TIME ZONE,
-    started_at TIMESTAMP WITH TIME ZONE,
-    ended_at TIMESTAMP WITH TIME ZONE,
-    duration_seconds INTEGER,
-    call_status VARCHAR(20) DEFAULT 'PENDING', -- 'PENDING', 'ACTIVE', 'COMPLETED', 'MISSED', 'DECLINED'
-    video_room_id VARCHAR(255), -- Jitsi Meet room ID or similar
-    recording_url TEXT,
-    notes TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT different_call_users CHECK (initiator_id != recipient_id)
-);
-
 -- Community Events
 CREATE TABLE community_events (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -418,11 +399,6 @@ CREATE INDEX idx_emergency_user_id ON emergency_alerts(user_id);
 CREATE INDEX idx_emergency_status ON emergency_alerts(status);
 CREATE INDEX idx_emergency_triggered_at ON emergency_alerts(triggered_at);
 
--- Video call indexes
-CREATE INDEX idx_video_call_initiator ON video_call_sessions(initiator_id);
-CREATE INDEX idx_video_call_recipient ON video_call_sessions(recipient_id);
-CREATE INDEX idx_video_call_created_at ON video_call_sessions(created_at);
-
 -- Donations indexes
 CREATE INDEX idx_donations_created_at ON donations(created_at);
 CREATE INDEX idx_donations_status ON donations(status);
@@ -485,7 +461,6 @@ ALTER TABLE background_verifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE companion_requests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE task_assistance_bookings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
-ALTER TABLE video_call_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE health_checkins ENABLE ROW LEVEL SECURITY;
 ALTER TABLE emergency_alerts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE family_access ENABLE ROW LEVEL SECURITY;
@@ -595,9 +570,6 @@ CREATE TRIGGER task_assistance_bookings_updated_at BEFORE UPDATE ON task_assista
   FOR EACH ROW EXECUTE FUNCTION update_modified_column();
 
 CREATE TRIGGER messages_updated_at BEFORE UPDATE ON messages
-  FOR EACH ROW EXECUTE FUNCTION update_modified_column();
-
-CREATE TRIGGER video_call_sessions_updated_at BEFORE UPDATE ON video_call_sessions
   FOR EACH ROW EXECUTE FUNCTION update_modified_column();
 
 CREATE TRIGGER medication_reminders_updated_at BEFORE UPDATE ON medication_reminders

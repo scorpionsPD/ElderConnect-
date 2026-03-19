@@ -4,6 +4,7 @@ export interface AddressSuggestion {
   formattedAddress: string
   latitude: number
   longitude: number
+  addressLine1?: string
   postcode?: string
   city?: string
   state?: string
@@ -21,6 +22,10 @@ export interface NominatimSearchResult {
   lat: string
   lon: string
   address?: {
+    house_number?: string
+    road?: string
+    pedestrian?: string
+    suburb?: string
     postcode?: string
     city?: string
     town?: string

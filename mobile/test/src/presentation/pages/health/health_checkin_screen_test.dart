@@ -112,6 +112,9 @@ class FakeAuthRepository implements AuthRepository {
     String? phoneNumber,
     String? bio,
     String? profilePictureUrl,
+    String? addressLine1,
+    String? city,
+    String? postcode,
   }) async =>
       const Right(null);
   @override

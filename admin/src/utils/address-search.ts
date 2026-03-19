@@ -37,12 +37,15 @@ const buildNominatimUrl = (query: string, options: AddressSearchOptions = {}) =>
 
 const mapNominatimResult = (item: NominatimSearchResult): AddressSuggestion => {
   const city = item.address?.city || item.address?.town || item.address?.village || item.address?.county
+  const streetName = item.address?.road || item.address?.pedestrian || item.address?.suburb
+  const addressLine1 = [item.address?.house_number, streetName].filter(Boolean).join(' ').trim()
   return {
     id: String(item.place_id),
     label: item.display_name,
     formattedAddress: item.display_name,
     latitude: Number(item.lat),
     longitude: Number(item.lon),
+    addressLine1: addressLine1 || undefined,
     postcode: item.address?.postcode,
     city,
     state: item.address?.state,
@@ -104,5 +107,44 @@ export const searchAddresses = async (
   } catch (error) {
     console.error('Address search error:', error)
     return []
+  }
+}
+
+const buildReverseNominatimUrl = (latitude: number, longitude: number) => {
+  const baseUrl = process.env.NEXT_PUBLIC_NOMINATIM_REVERSE_URL || 'https://nominatim.openstreetmap.org/reverse'
+  const params = new URLSearchParams({
+    lat: String(latitude),
+    lon: String(longitude),
+    format: 'jsonv2',
+    addressdetails: '1',
+  })
+
+  if (process.env.NEXT_PUBLIC_NOMINATIM_EMAIL) {
+    params.set('email', process.env.NEXT_PUBLIC_NOMINATIM_EMAIL)
+  }
+
+  return `${baseUrl}?${params.toString()}`
+}
+
+export const reverseGeocodeCoordinates = async (
+  latitude: number,
+  longitude: number
+): Promise<AddressSuggestion | null> => {
+  try {
+    const response = await fetch(buildReverseNominatimUrl(latitude, longitude), {
+      headers: {
+        Accept: 'application/json',
+      },
+    })
+
+    if (!response.ok) {
+      throw new Error(`Reverse geocoding failed with status ${response.status}`)
+    }
+
+    const data = (await response.json()) as NominatimSearchResult
+    return mapNominatimResult(data)
+  } catch (error) {
+    console.error('Reverse geocoding error:', error)
+    return null
   }
 }

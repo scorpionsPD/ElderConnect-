@@ -313,9 +313,8 @@ All UI flows are designed to seamlessly connect to:
 
 ### Short-term (Feature Expansion)
 5. Add messaging UI and real-time chat
-6. Implement video calling interface
-7. Create emergency SOS handler
-8. Add notification system UI
+6. Create emergency SOS handler
+7. Add notification system UI
 
 ### Medium-term (Mobile App)
 9. Adapt Flutter mobile app to match web design

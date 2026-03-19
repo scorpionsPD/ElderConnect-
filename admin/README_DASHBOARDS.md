@@ -348,9 +348,8 @@ npm run type-check
 
 ### Phase 5 (Advanced Features)
 1. Implement messaging UI
-2. Add video calling interface
-3. Create emergency SOS handler
-4. Build community events feature
+2. Create emergency SOS handler
+3. Build community events feature
 
 ---
 

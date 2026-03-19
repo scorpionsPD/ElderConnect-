@@ -5,6 +5,7 @@ export interface User {
   id: string
   email: string
   first_name: string
+  last_name?: string
   role: string
   phone_number?: string
   emergency_contact_name?: string
@@ -12,7 +13,10 @@ export interface User {
   profile_picture_url?: string
   bio?: string
   address?: string
+  address_line_1?: string
+  city?: string
   postcode?: string
+  date_of_birth?: string
   latitude?: number
   longitude?: number
 }

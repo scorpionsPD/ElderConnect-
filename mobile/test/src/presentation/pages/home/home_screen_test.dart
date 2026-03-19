@@ -27,7 +27,7 @@ void main() {
 
     await tester.pump();
     expect(find.byType(Scaffold), findsOneWidget);
-    expect(find.textContaining('Welcome,'), findsOneWidget);
+    expect(find.textContaining('Welcome back,'), findsOneWidget);
   });
 }
 
@@ -114,6 +114,9 @@ class FakeAuthRepository implements AuthRepository {
     String? phoneNumber,
     String? bio,
     String? profilePictureUrl,
+    String? addressLine1,
+    String? city,
+    String? postcode,
   }) async =>
       const Right(null);
 
