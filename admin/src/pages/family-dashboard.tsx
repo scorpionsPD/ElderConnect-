@@ -351,6 +351,23 @@ export default function FamilyDashboard() {
                     <p className="text-sm text-amber-800">{eldersError}</p>
                   </Card>
                 )}
+                <Card className="border-primary-200 bg-primary-50">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div>
+                      <h3 className="text-lg font-semibold text-primary-900">A gentle way to support our care community</h3>
+                      <p className="text-sm text-primary-800 mt-1">
+                        If you feel comfortable, your contribution helps us continue companion visits and wellness support for elders.
+                      </p>
+                    </div>
+                    <Link href="/donate" className="sm:flex-shrink-0">
+                      <Button className="w-full sm:w-auto flex items-center justify-center gap-2" variant="secondary">
+                        <Heart className="w-4 h-4" />
+                        Support with a Donation
+                      </Button>
+                    </Link>
+                  </div>
+                </Card>
+
                 {/* Connected Elders Summary */}
                 <Card>
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Connected Elders</h3>
@@ -407,6 +424,11 @@ export default function FamilyDashboard() {
                     <Button className="w-full" variant="secondary" onClick={() => setActiveTab('activities')}>
                       View Calendar
                     </Button>
+                    <Link href="/donate" className="block">
+                      <Button className="w-full" variant="secondary">
+                        Donate
+                      </Button>
+                    </Link>
                   </div>
                 </Card>
 

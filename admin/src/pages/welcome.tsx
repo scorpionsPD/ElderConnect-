@@ -126,6 +126,9 @@ export default function WelcomePage() {
 
               {/* Auth Buttons */}
               <div className="hidden md:flex items-center gap-3">
+                <Link href="/donate">
+                  <Button variant="secondary">Donate</Button>
+                </Link>
                 <Link href="/login">
                   <Button variant="ghost">Log In</Button>
                 </Link>
@@ -153,6 +156,7 @@ export default function WelcomePage() {
                 <a href="#volunteer" className="text-gray-600 py-2">Volunteer</a>
                 <a href="#about" className="text-gray-600 py-2">About</a>
                 <hr className="my-2" />
+                <Link href="/donate" className="text-primary-600 font-medium py-2">Donate</Link>
                 <Link href="/login" className="text-primary-600 font-medium py-2">Log In</Link>
                 <Link href="/signup">
                   <Button className="w-full">Get Started</Button>
@@ -188,6 +192,11 @@ export default function WelcomePage() {
                   <Link href="/signup">
                     <Button size="lg" className="w-full sm:w-auto text-lg px-8" icon={<ArrowRight className="w-5 h-5" />}>
                       Join Our Community
+                    </Button>
+                  </Link>
+                  <Link href="/donate">
+                    <Button variant="secondary" size="lg" className="w-full sm:w-auto text-lg px-8" icon={<Gift className="w-5 h-5" />}>
+                      Donate Now
                     </Button>
                   </Link>
                   <a href="#how-it-works">

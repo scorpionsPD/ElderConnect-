@@ -698,6 +698,23 @@ export default function ElderDashboard() {
           {activeTab === 'overview' && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2 space-y-6">
+                <Card className="border-primary-200 bg-primary-50">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div>
+                      <h3 className="text-lg font-semibold text-primary-900">A gentle way to support our care community</h3>
+                      <p className="text-sm text-primary-800 mt-1">
+                        If you feel comfortable, your contribution helps us continue companion visits and wellness support for elders.
+                      </p>
+                    </div>
+                    <Link href="/donate" className="sm:flex-shrink-0">
+                      <Button className="w-full sm:w-auto flex items-center justify-center gap-2" variant="secondary">
+                        <Heart className="w-4 h-4" />
+                        Support with a Donation
+                      </Button>
+                    </Link>
+                  </div>
+                </Card>
+
                 {/* Quick Actions */}
                 <Card>
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
@@ -716,6 +733,12 @@ export default function ElderDashboard() {
                       <Plus className="w-4 h-4" />
                       Request Companion
                     </Button>
+                    <Link href="/donate" className="col-span-2">
+                      <Button className="w-full flex items-center justify-center gap-2" variant="secondary">
+                        <Heart className="w-4 h-4" />
+                        Donate
+                      </Button>
+                    </Link>
                   </div>
                 </Card>
 
