@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import Head from 'next/head';
-import { Mail, Phone, MapPin, Send, CheckCircle } from 'lucide-react';
+import { Mail, Phone, Send, CheckCircle } from 'lucide-react';
 import Button from '@/components/Button';
 import PublicLayout from '@/components/PublicLayout';
 
@@ -51,14 +51,7 @@ export default function ContactPage() {
             <p className="text-gray-500 text-sm">We respond within 24 hours</p>
           </div>
 
-          <div className="bg-white rounded-xl p-6 shadow-sm text-center">
-            <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mx-auto mb-4">
-              <MapPin className="w-6 h-6 text-purple-600" />
-            </div>
-            <h3 className="font-semibold text-gray-900 mb-2">Address</h3>
-            <p className="text-gray-600">123 Community Lane</p>
-            <p className="text-gray-500 text-sm">San Francisco, CA 94102</p>
-          </div>
+
         </div>
 
         {submitted ? (
@@ -126,7 +119,7 @@ export default function ContactPage() {
         )}
 
         <div className="mt-8 bg-red-50 rounded-xl p-6 text-center">
-          <p className="text-red-800 font-medium">🚨 For emergencies, call 911</p>
+          <p className="text-red-800 font-medium">🚨 For emergencies, call 999</p>
           <p className="text-red-600 text-sm">ElderConnect+ is not an emergency service</p>
         </div>
       </div>
