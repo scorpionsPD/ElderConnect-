@@ -9,7 +9,7 @@ const faqs = {
   elders: [
     {
       question: 'Is ElderConnect+ really free?',
-      answer: 'Yes! ElderConnect+ is 100% free for seniors and their families. We are a non-profit organization funded by donations and grants.',
+      answer: 'ElderConnect+ currently provides core companionship support at no cost to elders and families.',
     },
     {
       question: 'How do I get matched with a volunteer?',

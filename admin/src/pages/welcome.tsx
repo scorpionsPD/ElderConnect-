@@ -22,8 +22,7 @@ import {
   Gift,
   ArrowRight,
   Menu,
-  X,
-  Quote
+  X
 } from 'lucide-react';
 import Button from '@/components/Button';
 
@@ -61,28 +60,6 @@ const activities = [
   { icon: BookOpen, label: 'Reading Together', color: 'bg-blue-100 text-blue-600' },
   { icon: Music, label: 'Music & Singing', color: 'bg-purple-100 text-purple-600' },
   { icon: Gamepad2, label: 'Games & Puzzles', color: 'bg-green-100 text-green-600' },
-];
-
-// Testimonials
-const testimonials = [
-  {
-    quote: "ElderConnect+ gave me back my sense of purpose. My volunteer Sarah visits every week, and we've become true friends.",
-    name: "Margaret, 78",
-    role: "Elder Member",
-    avatar: "👵",
-  },
-  {
-    quote: "Knowing my mother has regular companionship gives our family such peace of mind. The health updates are invaluable.",
-    name: "David Chen",
-    role: "Family Member",
-    avatar: "👨",
-  },
-  {
-    quote: "Volunteering here has been the most rewarding experience. The elders have so much wisdom to share.",
-    name: "Emily Roberts",
-    role: "Volunteer",
-    avatar: "👩",
-  },
 ];
 
 // Stats
@@ -214,7 +191,7 @@ export default function WelcomePage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <Star className="w-5 h-5 text-yellow-500" />
-                    <span>4.9/5 Rating</span>
+                    <span>Community Feedback</span>
                   </div>
                 </div>
               </div>
@@ -243,7 +220,7 @@ export default function WelcomePage() {
                       </div>
                       <div>
                         <p className="font-semibold text-gray-900">Visit Completed</p>
-                        <p className="text-sm text-gray-500">Margaret & Sarah</p>
+                        <p className="text-sm text-gray-500">Companion Session</p>
                       </div>
                     </div>
                   </div>
@@ -254,8 +231,8 @@ export default function WelcomePage() {
                         <Star className="w-5 h-5 text-yellow-500" />
                       </div>
                       <div>
-                        <p className="font-semibold text-gray-900">5-Star Rating</p>
-                        <p className="text-sm text-gray-500">&quot;Best companion ever!&quot;</p>
+                        <p className="font-semibold text-gray-900">Positive Feedback</p>
+                        <p className="text-sm text-gray-500">Meaningful companionship</p>
                       </div>
                     </div>
                   </div>
@@ -490,32 +467,36 @@ export default function WelcomePage() {
           </div>
         </section>
 
-        {/* Testimonials */}
+        {/* Community Principles */}
         <section className="py-20 bg-gray-50">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-16">
               <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-                Stories from Our Community
+                What We Prioritize
               </h2>
               <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-                Real experiences from elders, volunteers, and families
+                Clear principles that guide every connection on ElderConnect+
               </p>
             </div>
 
             <div className="grid md:grid-cols-3 gap-8">
-              {testimonials.map((testimonial, index) => (
+              {[
+                {
+                  title: 'Compassionate Matching',
+                  description: 'We focus on compatibility, communication preferences, and practical support needs.',
+                },
+                {
+                  title: 'Safety and Trust',
+                  description: 'Safeguarding checks, clear reporting paths, and responsible community standards.',
+                },
+                {
+                  title: 'Ongoing Support',
+                  description: 'Elders, families, and volunteers can access guidance whenever they need it.',
+                },
+              ].map((item, index) => (
                 <div key={index} className="bg-white rounded-2xl p-8 shadow-sm">
-                  <Quote className="w-10 h-10 text-primary-200 mb-4" />
-                  <p className="text-gray-700 mb-6 italic">&quot;{testimonial.quote}&quot;</p>
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center text-2xl">
-                      {testimonial.avatar}
-                    </div>
-                    <div>
-                      <p className="font-semibold text-gray-900">{testimonial.name}</p>
-                      <p className="text-sm text-gray-500">{testimonial.role}</p>
-                    </div>
-                  </div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-3">{item.title}</h3>
+                  <p className="text-gray-600">{item.description}</p>
                 </div>
               ))}
             </div>
@@ -535,9 +516,8 @@ export default function WelcomePage() {
                 generations, creating meaningful relationships that combat loneliness and isolation.
               </p>
               <p className="text-xl text-gray-600 mb-12 leading-relaxed">
-                We&apos;re a <strong>non-profit organization</strong> run by dedicated staff and powered by 
-                volunteers who believe in the power of human connection. Our service is and will always 
-                be <strong>completely free</strong> for seniors and their families.
+                We&apos;re a community-focused service run by dedicated staff and powered by 
+                volunteers who believe in the power of human connection.
               </p>
 
               <div className="bg-gradient-to-r from-primary-50 to-blue-50 rounded-2xl p-8 md:p-12">

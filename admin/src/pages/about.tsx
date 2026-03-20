@@ -7,28 +7,28 @@ import PublicLayout from '@/components/PublicLayout';
 
 const team = [
   {
-    name: 'Dr. Sarah Chen',
-    role: 'Founder & CEO',
-    bio: 'Former geriatric physician with 20 years of experience. Founded ElderConnect+ after seeing the impact of loneliness on her patients.',
-    avatar: '👩‍⚕️',
+    name: 'Program Leadership',
+    role: 'Strategy & Operations',
+    bio: 'Guides service quality, safeguarding standards, and long-term program direction.',
+    avatar: '🧭',
   },
   {
-    name: 'Michael Torres',
-    role: 'Chief Operations Officer',
-    bio: 'Non-profit veteran with experience scaling social impact organizations across the country.',
-    avatar: '👨‍💼',
+    name: 'Community Team',
+    role: 'Volunteer Support',
+    bio: 'Supports onboarding, training, and day-to-day volunteer coordination.',
+    avatar: '🤝',
   },
   {
-    name: 'Emily Roberts',
-    role: 'Head of Volunteer Programs',
-    bio: 'Started as a volunteer herself and now leads training and support for our volunteer community.',
-    avatar: '👩',
+    name: 'Care Coordination',
+    role: 'Elder & Family Support',
+    bio: 'Helps elders and families access companionship with clear communication and continuity.',
+    avatar: '❤️',
   },
   {
-    name: 'David Kim',
-    role: 'Chief Technology Officer',
-    bio: 'Tech for good advocate. Previously built accessibility tools at major tech companies.',
-    avatar: '👨‍💻',
+    name: 'Product & Engineering',
+    role: 'Platform Experience',
+    bio: 'Builds reliable tools that keep companionship services simple, safe, and accessible.',
+    avatar: '💻',
   },
 ];
 
@@ -71,11 +71,11 @@ export default function AboutPage() {
           <div className="prose prose-lg text-gray-600 space-y-4">
             <p>
               ElderConnect+ was born from a simple observation: too many seniors spend their days 
-              alone, without meaningful human connection. Our founder, Dr. Sarah Chen, saw this 
-              firsthand during her 20 years as a geriatric physician.
+              alone, without meaningful human connection. Our team saw this need firsthand
+              through community support work and local care experiences.
             </p>
             <p>
-              In 2020, she decided to do something about it. What started with 10 volunteers 
+              In 2020, we decided to do something about it. What started with a small group of volunteers 
               visiting seniors in Edinburgh has grown into a community effort spanning towns and cities across the UK.
             </p>
           </div>
