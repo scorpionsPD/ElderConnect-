@@ -424,11 +424,6 @@ export default function FamilyDashboard() {
                     <Button className="w-full" variant="secondary" onClick={() => setActiveTab('activities')}>
                       View Calendar
                     </Button>
-                    <Link href="/donate" className="block">
-                      <Button className="w-full" variant="secondary">
-                        Donate
-                      </Button>
-                    </Link>
                   </div>
                 </Card>
 
