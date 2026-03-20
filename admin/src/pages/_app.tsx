@@ -17,7 +17,6 @@ const publicRoutes = [
   '/about',
   '/contact',
   '/donate',
-  '/volunteer-resources',
   '/elder-guide',
   '/privacy',
   '/terms',

@@ -39,9 +39,6 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
               <Link href="/elder-guide" className="text-gray-600 hover:text-gray-900 transition-colors">
                 For Elders
               </Link>
-              <Link href="/volunteer-resources" className="text-gray-600 hover:text-gray-900 transition-colors">
-                For Volunteers
-              </Link>
               <Link href="/donate" className="text-gray-600 hover:text-gray-900 transition-colors">
                 Donate
               </Link>
@@ -99,9 +96,6 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
                 </Link>
                 <Link href="/elder-guide" className="px-4 py-2 text-gray-600 hover:bg-gray-50 rounded-lg">
                   For Elders
-                </Link>
-                <Link href="/volunteer-resources" className="px-4 py-2 text-gray-600 hover:bg-gray-50 rounded-lg">
-                  For Volunteers
                 </Link>
                 <Link href="/donate" className="px-4 py-2 text-gray-600 hover:bg-gray-50 rounded-lg">
                   Donate
