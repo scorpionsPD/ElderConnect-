@@ -25,6 +25,7 @@ import {
   X
 } from 'lucide-react';
 import Button from '@/components/Button';
+import { BRAND_ICON_ALT, BRAND_ICON_URL } from '@/utils/branding';
 
 // Feature cards data
 const features = [
@@ -88,7 +89,7 @@ export default function WelcomePage() {
               {/* Logo */}
               <div className="flex items-center gap-2">
                 <div className="w-10 h-10 bg-primary-100 rounded-xl flex items-center justify-center">
-                  <Heart className="w-6 h-6 text-primary-600" />
+                    <img src={BRAND_ICON_URL} alt={BRAND_ICON_ALT} className="w-6 h-6 rounded" />
                 </div>
                 <span className="text-xl font-bold text-gray-900">ElderConnect+</span>
               </div>
@@ -641,7 +642,7 @@ export default function WelcomePage() {
 
             <div className="border-t border-gray-800 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
               <p className="text-sm">
-                © 2026 ElderConnect+. All rights reserved.
+                © 2026 ScotiTech Solutions. All rights reserved.
               </p>
               <div className="flex gap-6 text-sm">
                 <Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>

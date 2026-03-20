@@ -52,6 +52,18 @@ Edit `.env.local` and add your Supabase credentials:
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
 
+Optional branding variables (single-place icon control):
+- `NEXT_PUBLIC_BRAND_ICON_URL` (can be a Supabase Storage public URL)
+- `NEXT_PUBLIC_BRAND_ICON_ALT` (image alt text)
+- `NEXT_PUBLIC_BRAND_ICON_VERSION` (cache-buster, e.g. `3`)
+
+Example:
+```bash
+NEXT_PUBLIC_BRAND_ICON_URL=https://<project-ref>.supabase.co/storage/v1/object/public/branding/logo.png
+NEXT_PUBLIC_BRAND_ICON_ALT=ElderConnect+ logo
+NEXT_PUBLIC_BRAND_ICON_VERSION=3
+```
+
 ### Database Setup
 
 Create the following tables in your Supabase database:

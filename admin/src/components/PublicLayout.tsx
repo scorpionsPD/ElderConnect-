@@ -1,8 +1,9 @@
 import React from 'react';
 import Link from 'next/link';
-import { Heart, Menu, X, LogOut } from 'lucide-react';
+import { Menu, X, LogOut } from 'lucide-react';
 import Button from '@/components/Button';
 import { useAuth } from '@/contexts/AuthContext';
+import { BRAND_ICON_ALT, BRAND_ICON_URL } from '@/utils/branding';
 
 interface PublicLayoutProps {
   children: React.ReactNode;
@@ -26,7 +27,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
             {/* Logo */}
             <Link href="/welcome" className="flex items-center gap-2">
               <div className="w-10 h-10 bg-primary-100 rounded-xl flex items-center justify-center">
-                <Heart className="w-6 h-6 text-primary-600" />
+                <img src={BRAND_ICON_URL} alt={BRAND_ICON_ALT} className="w-6 h-6 rounded" />
               </div>
               <span className="text-xl font-bold text-gray-900">ElderConnect+</span>
             </Link>
@@ -139,7 +140,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
           <div className="max-w-2xl mx-auto text-center mb-12">
             <div className="flex items-center justify-center gap-2 mb-4">
               <div className="w-10 h-10 bg-primary-600 rounded-xl flex items-center justify-center">
-                <Heart className="w-6 h-6 text-white" />
+                <img src={BRAND_ICON_URL} alt={BRAND_ICON_ALT} className="w-6 h-6 rounded" />
               </div>
               <span className="text-xl font-bold text-white">ElderConnect+</span>
             </div>
@@ -150,7 +151,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
 
           <div className="border-t border-gray-800 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-sm">
-              © 2026 ElderConnect+. All rights reserved.
+              © 2026 ScotiTech Solutions. All rights reserved.
             </p>
             <div className="flex gap-6 text-sm">
               <Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
