@@ -286,7 +286,7 @@ export default function DonatePage() {
         {/* Trust */}
         <div className="flex items-center justify-center gap-4 text-sm text-gray-500">
           <CheckCircle className="w-5 h-5 text-green-500" />
-          <span>Secure payment • Tax-deductible • 501(c)(3) nonprofit</span>
+          <span>Secure payment powered by Stripe • Your contribution supports ElderConnect+ services directly</span>
         </div>
       </div>
     </PublicLayout>
