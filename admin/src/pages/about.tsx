@@ -160,12 +160,9 @@ export default function AboutPage() {
         {/* CTA */}
         <section className="text-center">
           <h2 className="text-2xl font-bold text-gray-900 mb-4">Join Our Mission</h2>
-          <div className="flex justify-center gap-4">
+          <div className="flex justify-center">
             <Link href="/signup">
               <Button size="lg">Get Started</Button>
-            </Link>
-            <Link href="/careers">
-              <Button variant="secondary" size="lg">Join Our Team</Button>
             </Link>
           </div>
         </section>

@@ -21,8 +21,6 @@ const publicRoutes = [
   '/elder-guide',
   '/privacy',
   '/terms',
-  '/blog',
-  '/careers',
   '/partners'
 ]
 

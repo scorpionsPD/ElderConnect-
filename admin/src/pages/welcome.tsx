@@ -647,40 +647,16 @@ export default function WelcomePage() {
         {/* Footer */}
         <footer className="bg-gray-900 text-gray-400 py-16">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="grid md:grid-cols-4 gap-8 mb-12">
-              {/* Brand */}
-              <div>
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="w-10 h-10 bg-primary-600 rounded-xl flex items-center justify-center">
-                    <Heart className="w-6 h-6 text-white" />
-                  </div>
-                  <span className="text-xl font-bold text-white">ElderConnect+</span>
+            <div className="max-w-2xl mx-auto text-center mb-12">
+              <div className="flex items-center justify-center gap-2 mb-4">
+                <div className="w-10 h-10 bg-primary-600 rounded-xl flex items-center justify-center">
+                  <Heart className="w-6 h-6 text-white" />
                 </div>
-                <p className="text-sm">
-                  Connecting generations through care, companionship, and community.
-                </p>
+                <span className="text-xl font-bold text-white">ElderConnect+</span>
               </div>
-
-              {/* Links */}
-              <div>
-                <h4 className="text-white font-semibold mb-4">For Elders</h4>
-                <ul className="space-y-2 text-sm">
-                  <li><Link href="/signup" className="hover:text-white transition-colors">Find a Companion</Link></li>
-                  <li><Link href="/elder-guide" className="hover:text-white transition-colors">How It Works</Link></li>
-                  <li><Link href="/safety-trust" className="hover:text-white transition-colors">Safety & Trust</Link></li>
-                  <li><Link href="/faq" className="hover:text-white transition-colors">FAQ</Link></li>
-                </ul>
-              </div>
-
-              <div>
-                <h4 className="text-white font-semibold mb-4">Organization</h4>
-                <ul className="space-y-2 text-sm">
-                  <li><Link href="/about" className="hover:text-white transition-colors">About Us</Link></li>
-                  <li><Link href="/careers" className="hover:text-white transition-colors">Careers</Link></li>
-                  <li><Link href="/donate" className="hover:text-white transition-colors">Donate</Link></li>
-                  <li><Link href="/contact" className="hover:text-white transition-colors">Contact</Link></li>
-                </ul>
-              </div>
+              <p className="text-sm">
+                Connecting generations through care, companionship, and community.
+              </p>
             </div>
 
             <div className="border-t border-gray-800 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
