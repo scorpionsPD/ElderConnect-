@@ -173,7 +173,7 @@ export default function ElderGuidePage() {
         <section className="text-center bg-gradient-to-r from-primary-50 to-pink-50 rounded-2xl p-8">
           <h2 className="text-2xl font-bold text-gray-900 mb-4">Ready to Get Started?</h2>
           <p className="text-gray-600 mb-6">
-            Join thousands of seniors already enjoying companionship and connection.
+            Begin with a gentle, supportive path to companionship and connection.
           </p>
           <Link href="/signup">
             <Button size="lg">Sign Up Now</Button>

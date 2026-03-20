@@ -21,7 +21,7 @@ const team = [
   {
     name: 'Emily Roberts',
     role: 'Head of Volunteer Programs',
-    bio: 'Started as a volunteer herself. Now leads training and support for over 5,000 active volunteers.',
+    bio: 'Started as a volunteer herself and now leads training and support for our volunteer community.',
     avatar: '👩',
   },
   {
@@ -33,12 +33,12 @@ const team = [
 ];
 
 const milestones = [
-  { year: '2020', title: 'Founded', description: 'Started with 10 volunteers in Edinburgh, Scotland' },
-  { year: '2021', title: 'First 1,000 Matches', description: 'Expanded to 5 cities' },
-  { year: '2022', title: 'National Recognition', description: 'Received Non-Profit of the Year award' },
-  { year: '2023', title: '10,000 Elders Served', description: 'Operating in 25 cities' },
-  { year: '2024', title: 'Mobile App Launch', description: 'Made connections easier than ever' },
-  { year: '2025', title: 'International Expansion', description: 'Launched in Canada and UK' },
+  { year: '2020', title: 'Founded', description: 'Started in Edinburgh, Scotland' },
+  { year: '2021', title: 'Early Community Growth', description: 'Expanded local companionship support' },
+  { year: '2022', title: 'Program Development', description: 'Strengthened safety and volunteer training' },
+  { year: '2023', title: 'Service Expansion', description: 'Broadened support for elders and families' },
+  { year: '2024', title: 'Mobile Experience', description: 'Improved access through the app' },
+  { year: '2025', title: 'UK Rollout', description: 'Prepared for wider launch across the UK' },
 ];
 
 export default function AboutPage() {
@@ -76,8 +76,7 @@ export default function AboutPage() {
             </p>
             <p>
               In 2020, she decided to do something about it. What started with 10 volunteers 
-              visiting seniors in Edinburgh has grown into a movement spanning towns and cities across the UK, 
-              with over 5,000 active volunteers making a difference every day.
+              visiting seniors in Edinburgh has grown into a community effort spanning towns and cities across the UK.
             </p>
           </div>
         </section>

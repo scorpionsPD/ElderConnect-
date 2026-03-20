@@ -87,10 +87,10 @@ const testimonials = [
 
 // Stats
 const stats = [
-  { value: '10,000+', label: 'Elders Supported' },
-  { value: '5,000+', label: 'Active Volunteers' },
-  { value: '50,000+', label: 'Visits Completed' },
-  { value: '98%', label: 'Satisfaction Rate' },
+  { value: 'Community-Led', label: 'Support Network' },
+  { value: 'Human-Centered', label: 'Volunteer Care' },
+  { value: 'Safety-First', label: 'Platform Approach' },
+  { value: 'UK-Focused', label: 'Launch Region' },
 ];
 
 export default function WelcomePage() {
@@ -613,7 +613,7 @@ export default function WelcomePage() {
               </div>
               
               <p className="text-sm text-gray-500">
-                ElderConnect+ is a registered 501(c)(3) non-profit. All donations are tax-deductible.
+                Contributions support ElderConnect+ services and platform operations.
               </p>
             </div>
           </div>

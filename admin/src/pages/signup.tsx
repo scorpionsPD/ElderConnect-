@@ -535,8 +535,8 @@ export default function SignupPage() {
                       <Star className="w-6 h-6 text-yellow-500" />
                     </div>
                     <div>
-                      <p className="font-semibold text-gray-900">Join 10,000+ members</p>
-                      <p className="text-sm text-gray-600">Building meaningful connections daily</p>
+                      <p className="font-semibold text-gray-900">Join the ElderConnect+ community</p>
+                      <p className="text-sm text-gray-600">Building meaningful connections with care</p>
                     </div>
                   </div>
                 </div>

@@ -135,8 +135,8 @@ export default function VolunteerOnboarding() {
                     <Star className="w-6 h-6 text-yellow-500" />
                   </div>
                   <div className="text-left">
-                    <p className="font-semibold text-gray-900">Join 1,200+ volunteers</p>
-                    <p className="text-sm text-gray-600">Making 5,000+ connections monthly</p>
+                    <p className="font-semibold text-gray-900">Join our volunteer community</p>
+                    <p className="text-sm text-gray-600">Helping elders feel connected and supported</p>
                   </div>
                 </div>
               </div>

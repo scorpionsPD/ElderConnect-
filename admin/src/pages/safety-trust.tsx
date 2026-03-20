@@ -148,7 +148,7 @@ export default function SafetyTrustPage() {
               <ul className="space-y-2 text-gray-700">
                 <li>• Press the <strong>Emergency Button</strong> in the app</li>
                 <li>• Call our 24/7 safety line: <strong>1-800-ELDER-SAFE</strong></li>
-                <li>• For immediate danger, always call <strong>911</strong></li>
+                <li>• For immediate danger, always call <strong>999</strong></li>
               </ul>
             </div>
           </div>
@@ -158,7 +158,7 @@ export default function SafetyTrustPage() {
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-900 mb-4">Ready to Get Started?</h2>
           <p className="text-gray-600 mb-6">
-            Join thousands who trust ElderConnect+ for safe, meaningful companionship.
+            Start your ElderConnect+ journey with a safety-first approach to companionship.
           </p>
           <Link href="/signup">
             <Button size="lg">Sign Up Now</Button>
