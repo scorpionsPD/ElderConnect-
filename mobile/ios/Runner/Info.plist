@@ -24,18 +24,24 @@
 	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
-	<key>NSCameraUsageDescription</key>
-	<string>ElderConnect+ uses the camera so you can update your profile photo.</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>ElderConnect+ uses your photo library so you can choose a profile photo.</string>
-	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>ElderConnect+ may save images related to your profile photo updates.</string>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>ElderConnect+ uses your location to help share your current address during emergency and support workflows.</string>
-	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>ElderConnect+ uses your location to help share your current address during emergency and support workflows.</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>ElderConnect+ uses the camera so you can update your profile photo.</string>
+	<key>NSHealthShareUsageDescription</key>
+	<string>ElderConnect+ reads selected health data to support wellness check-ins and provide better care insights.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>ElderConnect+ writes selected wellness updates when you choose to sync your health check-in activity.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>ElderConnect+ uses your location to help share your current address during emergency and support workflows.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>ElderConnect+ uses your location to help share your current address during emergency and support workflows.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>ElderConnect+ uses the microphone for voice notes and audio-based support features when you choose to use them.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>ElderConnect+ may save images related to your profile photo updates.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>ElderConnect+ uses your photo library so you can choose a profile photo.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
