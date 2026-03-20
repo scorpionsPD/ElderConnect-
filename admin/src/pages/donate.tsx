@@ -16,7 +16,6 @@ export default function DonatePage() {
   const router = useRouter();
   const [selectedAmount, setSelectedAmount] = useState<number | 'custom'>(50);
   const [customAmount, setCustomAmount] = useState('');
-  const [isMonthly, setIsMonthly] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
@@ -107,7 +106,7 @@ export default function DonatePage() {
         body: JSON.stringify({
           amount: finalAmount,
           currency: 'GBP',
-          donationType: isMonthly ? 'MONTHLY_SUBSCRIPTION' : 'ONE_TIME',
+          donationType: 'ONE_TIME',
           donorName: isAnonymous ? null : name.trim(),
           donorEmail: isAnonymous ? null : email.trim(),
           donorMessage: message.trim() || null,
@@ -148,8 +147,7 @@ export default function DonatePage() {
           </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-4">Thank You!</h1>
           <p className="text-xl text-gray-600 mb-8">
-            Your {isMonthly ? 'monthly' : ''} donation of £{finalAmount} will help bring companionship 
-            to seniors who need it most.
+            Your donation of £{finalAmount} will help bring companionship to seniors who need it most.
           </p>
           <Button onClick={() => setSubmitted(false)}>Make Another Donation</Button>
         </div>
@@ -229,26 +227,6 @@ export default function DonatePage() {
           </button>
         </div>
 
-        {/* Monthly Toggle */}
-        <div className="flex items-center justify-center gap-4 mb-8">
-          <span className={`font-medium ${!isMonthly ? 'text-gray-900' : 'text-gray-400'}`}>
-            One-time
-          </span>
-          <button
-            onClick={() => setIsMonthly(!isMonthly)}
-            className={`w-14 h-8 rounded-full transition-colors ${
-              isMonthly ? 'bg-primary-600' : 'bg-gray-300'
-            }`}
-          >
-            <div className={`w-6 h-6 bg-white rounded-full shadow-md transition-transform ml-1 ${
-              isMonthly ? 'translate-x-6' : ''
-            }`} />
-          </button>
-          <span className={`font-medium ${isMonthly ? 'text-gray-900' : 'text-gray-400'}`}>
-            Monthly
-          </span>
-        </div>
-
         {/* Donation Form */}
         <form onSubmit={handleSubmit} className="bg-white rounded-2xl p-8 shadow-sm mb-8">
           <h2 className="text-xl font-bold text-gray-900 mb-6">Complete Your Donation</h2>
@@ -296,7 +274,7 @@ export default function DonatePage() {
           )}
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-gray-600">Your {isMonthly ? 'monthly' : ''} donation:</p>
+              <p className="text-gray-600">Your donation:</p>
               <p className="text-3xl font-bold text-primary-600">£{finalAmount}</p>
             </div>
             <Button type="submit" size="lg" disabled={finalAmount <= 0 || submitting}>

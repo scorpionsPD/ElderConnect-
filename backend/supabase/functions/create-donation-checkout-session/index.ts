@@ -5,11 +5,10 @@ import { corsHeaders } from '../_shared/cors.ts'
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY')
-const stripeMonthlyPriceId = Deno.env.get('STRIPE_MONTHLY_PRICE_ID')
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-serve(async (req) => {
+serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
@@ -27,7 +26,6 @@ serve(async (req) => {
 
     const amount = Number(payload.amount)
     const currency = String(payload.currency || 'GBP').toLowerCase()
-    const donationType = String(payload.donationType || 'ONE_TIME').toUpperCase()
     const donorEmail = payload.donorEmail ? String(payload.donorEmail).trim() : null
     const donorName = payload.donorName ? String(payload.donorName).trim() : null
     const donorMessage = payload.donorMessage ? String(payload.donorMessage).trim() : null
@@ -45,7 +43,6 @@ serve(async (req) => {
     }
 
     const amountMinor = Math.round(amount * 100)
-    const isMonthly = donationType === 'MONTHLY_SUBSCRIPTION'
 
     const { data: donation, error: donationInsertError } = await supabase
       .from('donations')
@@ -53,7 +50,7 @@ serve(async (req) => {
         donor_id: donorId,
         donation_amount: amount,
         currency: currency.toUpperCase(),
-        donation_type: donationType,
+        donation_type: 'ONE_TIME',
         donation_method: 'CARD',
         is_anonymous: isAnonymous,
         donor_message: donorMessage,
@@ -76,27 +73,21 @@ serve(async (req) => {
     stripeBody.append('allow_promotion_codes', 'true')
     stripeBody.append('payment_method_types[0]', 'card')
     stripeBody.append('metadata[donation_id]', donation.id)
-    stripeBody.append('metadata[donation_type]', donationType)
+    stripeBody.append('metadata[donation_type]', 'ONE_TIME')
     if (donorEmail) {
       stripeBody.append('customer_email', donorEmail)
       stripeBody.append('metadata[donor_email]', donorEmail)
     }
     if (donorName) stripeBody.append('metadata[donor_name]', donorName)
 
-    if (isMonthly && stripeMonthlyPriceId) {
-      stripeBody.append('mode', 'subscription')
-      stripeBody.append('line_items[0][price]', stripeMonthlyPriceId)
-      stripeBody.append('line_items[0][quantity]', '1')
-    } else {
-      stripeBody.append('mode', 'payment')
-      stripeBody.append('line_items[0][price_data][currency]', currency)
-      stripeBody.append('line_items[0][price_data][product_data][name]', 'ElderConnect+ Donation')
-      stripeBody.append('line_items[0][price_data][product_data][description]', 'Support companionship for seniors')
-      stripeBody.append('line_items[0][price_data][unit_amount]', String(amountMinor))
-      stripeBody.append('line_items[0][quantity]', '1')
-      stripeBody.append('payment_intent_data[metadata][donation_id]', donation.id)
-      if (donorEmail) stripeBody.append('payment_intent_data[metadata][donor_email]', donorEmail)
-    }
+    stripeBody.append('mode', 'payment')
+    stripeBody.append('line_items[0][price_data][currency]', currency)
+    stripeBody.append('line_items[0][price_data][product_data][name]', 'ElderConnect+ Donation')
+    stripeBody.append('line_items[0][price_data][product_data][description]', 'Support companionship for seniors')
+    stripeBody.append('line_items[0][price_data][unit_amount]', String(amountMinor))
+    stripeBody.append('line_items[0][quantity]', '1')
+    stripeBody.append('payment_intent_data[metadata][donation_id]', donation.id)
+    if (donorEmail) stripeBody.append('payment_intent_data[metadata][donor_email]', donorEmail)
 
     const stripeRes = await fetch('https://api.stripe.com/v1/checkout/sessions', {
       method: 'POST',
@@ -132,7 +123,7 @@ serve(async (req) => {
       donation_id: donation.id,
       session_id: stripePayload.id,
       checkout_url: stripePayload.url,
-      mode: isMonthly && stripeMonthlyPriceId ? 'subscription' : 'payment',
+      mode: 'payment',
     })
   } catch (error) {
     console.error('create-donation-checkout-session failed', error)
