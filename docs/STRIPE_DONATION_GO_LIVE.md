@@ -13,7 +13,7 @@ Set these as Supabase function secrets:
 Also ensure existing service secrets are present:
 
 - `SUPABASE_URL`
-- `SUPABASE_SERVICE_ROLE_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY` 
 
 ### Web (`admin/.env.local`)
 
@@ -71,6 +71,8 @@ supabase secrets set \
    ```
    https://kydzdwzmuibwfohrdcmu.supabase.co/functions/v1/stripe-webhook
    ```
+   Do **not** use a page URL such as `https://elderconnect-eta.vercel.app/welcome` for Stripe webhooks.
+   Stripe must send events to the Edge Function endpoint above.
 3. Subscribe to these events:
    - `checkout.session.completed`
    - `payment_intent.succeeded`
