@@ -1,7 +1,8 @@
 import React from 'react';
 import Link from 'next/link';
-import { Heart, Menu, X } from 'lucide-react';
+import { Heart, Menu, X, LogOut } from 'lucide-react';
 import Button from '@/components/Button';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface PublicLayoutProps {
   children: React.ReactNode;
@@ -9,6 +10,12 @@ interface PublicLayoutProps {
 
 export default function PublicLayout({ children }: PublicLayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
+  const { user, isAuthenticated, logout } = useAuth();
+
+  const dashboardHref =
+    user?.role === 'volunteer' ? '/volunteer-dashboard' :
+    user?.role === 'family'    ? '/family-dashboard' :
+    '/elder-dashboard';
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -45,12 +52,29 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
 
             {/* Auth Buttons */}
             <div className="hidden md:flex items-center gap-3">
-              <Link href="/login">
-                <Button variant="ghost">Log In</Button>
-              </Link>
-              <Link href="/signup">
-                <Button>Sign Up</Button>
-              </Link>
+              {isAuthenticated ? (
+                <>
+                  <span className="text-sm text-gray-600">
+                    Hi, {user?.first_name || user?.email}
+                  </span>
+                  <Link href={dashboardHref}>
+                    <Button variant="ghost">Dashboard</Button>
+                  </Link>
+                  <Button variant="ghost" onClick={logout} className="flex items-center gap-1">
+                    <LogOut className="w-4 h-4" />
+                    Log Out
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Link href="/login">
+                    <Button variant="ghost">Log In</Button>
+                  </Link>
+                  <Link href="/signup">
+                    <Button>Sign Up</Button>
+                  </Link>
+                </>
+              )}
             </div>
 
             {/* Mobile Menu Button */}
@@ -86,12 +110,23 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
                   Contact
                 </Link>
                 <div className="flex gap-2 px-4 pt-4 border-t border-gray-100 mt-2">
-                  <Link href="/login" className="flex-1">
-                    <Button variant="secondary" className="w-full">Log In</Button>
-                  </Link>
-                  <Link href="/signup" className="flex-1">
-                    <Button className="w-full">Sign Up</Button>
-                  </Link>
+                  {isAuthenticated ? (
+                    <>
+                      <Link href={dashboardHref} className="flex-1">
+                        <Button variant="secondary" className="w-full">Dashboard</Button>
+                      </Link>
+                      <Button className="w-full flex-1" onClick={logout}>Log Out</Button>
+                    </>
+                  ) : (
+                    <>
+                      <Link href="/login" className="flex-1">
+                        <Button variant="secondary" className="w-full">Log In</Button>
+                      </Link>
+                      <Link href="/signup" className="flex-1">
+                        <Button className="w-full">Sign Up</Button>
+                      </Link>
+                    </>
+                  )}
                 </div>
               </nav>
             </div>
