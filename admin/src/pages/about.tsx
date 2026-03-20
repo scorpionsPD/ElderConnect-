@@ -33,7 +33,7 @@ const team = [
 ];
 
 const milestones = [
-  { year: '2020', title: 'Founded', description: 'Started with 10 volunteers in San Francisco' },
+  { year: '2020', title: 'Founded', description: 'Started with 10 volunteers in Edinburgh, Scotland' },
   { year: '2021', title: 'First 1,000 Matches', description: 'Expanded to 5 cities' },
   { year: '2022', title: 'National Recognition', description: 'Received Non-Profit of the Year award' },
   { year: '2023', title: '10,000 Elders Served', description: 'Operating in 25 cities' },
@@ -76,7 +76,7 @@ export default function AboutPage() {
             </p>
             <p>
               In 2020, she decided to do something about it. What started with 10 volunteers 
-              visiting seniors in San Francisco has grown into a movement spanning 25 cities, 
+              visiting seniors in Edinburgh has grown into a movement spanning towns and cities across the UK, 
               with over 5,000 active volunteers making a difference every day.
             </p>
           </div>
@@ -153,7 +153,7 @@ export default function AboutPage() {
           <MapPin className="w-8 h-8 text-primary-600 mx-auto mb-4" />
           <h2 className="text-xl font-bold text-gray-900 mb-2">Where We Operate</h2>
           <p className="text-gray-600 mb-4">
-            ElderConnect+ is active in 25 cities across the United States, Canada, and the UK.
+            ElderConnect+ is active across Scotland, England, Wales, and Northern Ireland.
           </p>
         </section>
 

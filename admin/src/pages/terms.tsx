@@ -109,7 +109,7 @@ export default function TermsOfServicePage() {
             </div>
             <p className="text-gray-600">
               While we provide emergency notification features, ElderConnect+ is <strong>not</strong> an 
-              emergency response service. In a medical emergency, always call 911.
+              emergency response service. In a medical emergency, always call 999.
             </p>
           </section>
 
@@ -131,7 +131,7 @@ export default function TermsOfServicePage() {
           <section>
             <h2 className="text-xl font-bold text-gray-900 mb-4">9. Governing Law</h2>
             <p className="text-gray-600">
-              These Terms shall be governed by the laws of the State of California, United States.
+              These Terms shall be governed by the laws of Scotland and the United Kingdom. Any disputes shall be subject to the exclusive jurisdiction of the Scottish courts.
             </p>
           </section>
 

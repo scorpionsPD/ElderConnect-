@@ -37,8 +37,8 @@ const currentPartners = [
   { name: 'TechCorp Foundation', type: 'Foundation', since: '2020' },
   { name: 'Sunrise Senior Living', type: 'Senior Care', since: '2021' },
   { name: 'Community Bank', type: 'Corporate', since: '2022' },
-  { name: 'City of San Francisco', type: 'Government', since: '2020' },
-  { name: 'AARP Foundation', type: 'Foundation', since: '2023' },
+  { name: 'City of Edinburgh Council', type: 'Government', since: '2020' },
+  { name: 'Age Scotland', type: 'Foundation', since: '2023' },
 ];
 
 const impactStats = [
