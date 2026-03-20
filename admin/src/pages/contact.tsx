@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import Head from 'next/head';
-import { Mail, Phone, Send, CheckCircle } from 'lucide-react';
+import { Mail, Send, CheckCircle } from 'lucide-react';
 import Button from '@/components/Button';
 import PublicLayout from '@/components/PublicLayout';
 
@@ -32,16 +32,7 @@ export default function ContactPage() {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-6 mb-12">
-          <div className="bg-white rounded-xl p-6 shadow-sm text-center">
-            <div className="w-12 h-12 bg-primary-100 rounded-xl flex items-center justify-center mx-auto mb-4">
-              <Phone className="w-6 h-6 text-primary-600" />
-            </div>
-            <h3 className="font-semibold text-gray-900 mb-2">Phone</h3>
-            <p className="text-gray-600">1-800-ELDER-HELP</p>
-            <p className="text-gray-500 text-sm">Mon-Fri, 8am-8pm</p>
-          </div>
-
+        <div className="max-w-md mx-auto mb-12">
           <div className="bg-white rounded-xl p-6 shadow-sm text-center">
             <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mx-auto mb-4">
               <Mail className="w-6 h-6 text-green-600" />
@@ -50,7 +41,6 @@ export default function ContactPage() {
             <p className="text-gray-600">hello@elderconnect.com</p>
             <p className="text-gray-500 text-sm">We respond within 24 hours</p>
           </div>
-
 
         </div>
 

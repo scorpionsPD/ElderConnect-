@@ -673,16 +673,6 @@ export default function WelcomePage() {
               </div>
 
               <div>
-                <h4 className="text-white font-semibold mb-4">For Volunteers</h4>
-                <ul className="space-y-2 text-sm">
-                  <li><Link href="/signup" className="hover:text-white transition-colors">Become a Volunteer</Link></li>
-                  <li><Link href="/volunteer-resources" className="hover:text-white transition-colors">Training Program</Link></li>
-                  <li><Link href="/blog" className="hover:text-white transition-colors">Volunteer Stories</Link></li>
-                  <li><Link href="/volunteer-resources" className="hover:text-white transition-colors">Resources</Link></li>
-                </ul>
-              </div>
-
-              <div>
                 <h4 className="text-white font-semibold mb-4">Organization</h4>
                 <ul className="space-y-2 text-sm">
                   <li><Link href="/about" className="hover:text-white transition-colors">About Us</Link></li>
