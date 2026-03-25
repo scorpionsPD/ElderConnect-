@@ -2,7 +2,7 @@ name: elderconnect_plus
 description: "Community-driven elderly support mobile app. Completely free, donation-supported, GDPR compliant."
 publish_to: 'none'
 
-version: 1.0.4+64
+version: 1.0.4+65
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -109,6 +109,9 @@ dev_dependencies:
   mocktail: ^1.0.0
   integration_test:
     sdk: flutter
+
+dependency_overrides:
+  path_provider_foundation: 2.5.1
 
 flutter:
   uses-material-design: true
