@@ -19,13 +19,11 @@ import {
   MapPin,
   Sparkles,
   Star,
-  Shield,
-  RefreshCw
+  Shield
 } from 'lucide-react';
 import Button from '@/components/Button';
 import AddressAutocomplete from '@/components/AddressAutocomplete';
 import { AddressSuggestion } from '@/types/address';
-import { reverseGeocodeCoordinates } from '@/utils/address-search';
 import apiClient from '@/utils/api-client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
@@ -99,7 +97,6 @@ export default function SignupPage() {
   const [addressPostcode, setAddressPostcode] = useState('');
   const [addressLatitude, setAddressLatitude] = useState<number | undefined>();
   const [addressLongitude, setAddressLongitude] = useState<number | undefined>();
-  const [locationLoading, setLocationLoading] = useState(false);
 
   // Initialize from query params (when redirected from login for new user)
   useEffect(() => {
@@ -153,57 +150,6 @@ export default function SignupPage() {
     setAddressPostcode('');
     setAddressLatitude(undefined);
     setAddressLongitude(undefined);
-  };
-
-  const handleUseCurrentLocation = () => {
-    if (typeof window === 'undefined' || !navigator.geolocation) {
-      toast.error('Location is not supported in this browser.');
-      return;
-    }
-
-    setLocationLoading(true);
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        try {
-          const suggestion = await reverseGeocodeCoordinates(
-            position.coords.latitude,
-            position.coords.longitude
-          );
-
-          if (!suggestion) {
-            toast.error('Unable to resolve your current address.');
-            return;
-          }
-
-          setAddress(suggestion.formattedAddress);
-          setAddressLine1(suggestion.addressLine1 || suggestion.formattedAddress.split(',')[0]?.trim() || '');
-          setAddressCity(suggestion.city || '');
-          setAddressPostcode(suggestion.postcode || '');
-          setAddressLatitude(position.coords.latitude);
-          setAddressLongitude(position.coords.longitude);
-          toast.success('Current address loaded.');
-        } finally {
-          setLocationLoading(false);
-        }
-      },
-      (error) => {
-        setLocationLoading(false);
-        if (error.code === error.PERMISSION_DENIED) {
-          toast.error('Location permission was denied.');
-          return;
-        }
-        if (error.code === error.POSITION_UNAVAILABLE) {
-          toast.error('Current location is unavailable.');
-          return;
-        }
-        if (error.code === error.TIMEOUT) {
-          toast.error('Location request timed out.');
-          return;
-        }
-        toast.error('Unable to fetch your current location.');
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
-    );
   };
 
   // Resend timer countdown
@@ -807,16 +753,7 @@ export default function SignupPage() {
                           onSelect={handleAddressSelect}
                           placeholder="Search your address or postcode"
                         />
-                        <div className="mt-3 flex flex-wrap items-center gap-3">
-                          <Button
-                            type="button"
-                            variant="secondary"
-                            size="sm"
-                            text={locationLoading ? 'Locating...' : 'Use Current Location'}
-                            icon={<RefreshCw className="w-4 h-4" />}
-                            onClick={handleUseCurrentLocation}
-                            loading={locationLoading}
-                          />
+                        <div className="mt-3">
                           {(addressLine1 || addressCity || addressPostcode) && (
                             <p className="text-xs text-gray-600">
                               {[addressLine1, addressCity, addressPostcode].filter(Boolean).join(', ')}
@@ -882,16 +819,7 @@ export default function SignupPage() {
                           onSelect={handleAddressSelect}
                           placeholder="Search your address or postcode"
                         />
-                        <div className="mt-3 flex flex-wrap items-center gap-3">
-                          <Button
-                            type="button"
-                            variant="secondary"
-                            size="sm"
-                            text={locationLoading ? 'Locating...' : 'Use Current Location'}
-                            icon={<RefreshCw className="w-4 h-4" />}
-                            onClick={handleUseCurrentLocation}
-                            loading={locationLoading}
-                          />
+                        <div className="mt-3">
                           {(addressLine1 || addressCity || addressPostcode) && (
                             <p className="text-xs text-gray-600">
                               {[addressLine1, addressCity, addressPostcode].filter(Boolean).join(', ')}

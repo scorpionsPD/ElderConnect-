@@ -99,6 +99,14 @@ serve(async (req: Request) => {
         .single()
 
       if (existingUser) {
+        await supabase
+          .from('users')
+          .update({
+            is_verified: true,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', existingUser.id)
+
         // User exists, return their data
         const token = await generateSessionToken({
           user_id: existingUser.id,
@@ -259,6 +267,14 @@ serve(async (req: Request) => {
     }
 
     // User exists - generate auth token
+    await supabase
+      .from('users')
+      .update({
+        is_verified: true,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', userRecords.id)
+
     const token = await generateSessionToken({
       user_id: userRecords.id,
       email: userRecords.email,

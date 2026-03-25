@@ -91,15 +91,37 @@ class HomeScreen extends ConsumerWidget {
               );
             }
 
+            final isElder = user.role == AppConstants.roleElder;
+            final isFamily = user.role == AppConstants.roleFamily;
+            final isVolunteer = user.role == AppConstants.roleVolunteer;
+
             final todaysCheckin =
-                ref.watch(todaysHealthCheckinProvider(user.id));
-            final requests = user.role == AppConstants.roleVolunteer
+                isElder ? ref.watch(todaysHealthCheckinProvider(user.id)) : null;
+            final requests = isVolunteer
                 ? ref.watch(volunteerCompanionRequestsProvider(user.id))
+                : isFamily
+                    ? ref.watch(familyCompanionRequestsProvider(user.id))
                 : ref.watch(elderCompanionRequestsProvider(user.id));
             final shouldShowDonationPrompt =
               AppConstants.enableDonations &&
-              (user.role == AppConstants.roleElder ||
-                user.role == AppConstants.roleFamily);
+              (isElder || isFamily);
+            final suggestedNextSteps = isElder
+                ? const [
+                    'Complete your daily health check-in.',
+                    'Review companion requests that support today\'s plans.',
+                    'Start a message or video check-in with your support network.',
+                  ]
+                : isFamily
+                    ? const [
+                        'Review the latest wellbeing update from your connected elder.',
+                        'Check whether any companion visits need a family follow-up.',
+                        'Share a family chat update after appointments, calls, or visits.',
+                      ]
+                    : const [
+                        'Review open support requests that match your availability.',
+                        'Accept a companion visit you can realistically complete today.',
+                        'Send a quick update once a visit is confirmed or finished.',
+                      ];
 
             return AnnotatedRegion<SystemUiOverlayStyle>(
               value: SystemUiOverlayStyle.dark,
@@ -108,6 +130,8 @@ class HomeScreen extends ConsumerWidget {
                   ref.invalidate(todaysHealthCheckinProvider(user.id));
                   if (user.role == AppConstants.roleVolunteer) {
                     ref.invalidate(volunteerCompanionRequestsProvider(user.id));
+                  } else if (user.role == AppConstants.roleFamily) {
+                    ref.invalidate(familyCompanionRequestsProvider(user.id));
                   } else {
                     ref.invalidate(elderCompanionRequestsProvider(user.id));
                   }
@@ -118,8 +142,31 @@ class HomeScreen extends ConsumerWidget {
                     const SizedBox(height: 8),
                     _HeroCard(
                       user: user,
-                      onPrimaryTap: () => context.pushNamed('health'),
-                      onSecondaryTap: () => context.goNamed('companions'),
+                      primaryLabel: isElder
+                          ? 'Start check-in'
+                          : isFamily
+                              ? 'View health feed'
+                              : 'Open care requests',
+                      secondaryLabel: isFamily ? 'Open family chat' : 'View requests',
+                      description: isElder
+                          ? 'Everything important for today is organised here, from wellbeing updates to support requests.'
+                          : isFamily
+                              ? 'Stay on top of wellbeing updates, companion visits, and family messages for the people you support.'
+                              : 'Everything important for today is organised here, from open care requests to follow-up updates.',
+                      onPrimaryTap: () {
+                        if (isElder) {
+                          context.pushNamed('health');
+                          return;
+                        }
+                        if (isFamily) {
+                          context.pushNamed('family-activity');
+                          return;
+                        }
+                        context.goNamed('companions');
+                      },
+                      onSecondaryTap: () => isFamily
+                          ? context.pushNamed('family-chat')
+                          : context.goNamed('companions'),
                     ),
                     const SizedBox(height: 18),
                     _SectionCard(
@@ -131,34 +178,76 @@ class HomeScreen extends ConsumerWidget {
                           children: [
                             Expanded(
                               child: _StatusCard(
-                                title: 'Health Check-in',
-                                description:
-                                    'Share today\'s wellbeing in under 30 seconds.',
-                                value: todaysCheckin.when(
-                                  data: (checkin) =>
-                                      checkin == null ? 'Pending' : 'Completed',
-                                  loading: () => 'Loading',
-                                  error: (_, __) => 'Unavailable',
-                                ),
-                                icon: Icons.favorite_outline,
-                                color: AppTheme.successColor,
-                                onTap: () => context.pushNamed('health'),
+                                title: isElder
+                                    ? 'Health Check-in'
+                                    : isFamily
+                                        ? 'Family Health Feed'
+                                        : 'Response Readiness',
+                                description: isElder
+                                    ? 'Share today\'s wellbeing in under 30 seconds.'
+                                    : isFamily
+                                        ? 'Track elder wellbeing updates and care activity.'
+                                        : 'Review pending requests and start supporting elders.',
+                                value: isElder
+                                    ? todaysCheckin!.when(
+                                        data: (checkin) =>
+                                            checkin == null ? 'Pending' : 'Completed',
+                                        loading: () => 'Loading',
+                                        error: (_, __) => 'Unavailable',
+                                      )
+                                    : isFamily
+                                        ? 'View timeline'
+                                        : requests.when(
+                                            data: (items) => '${items.length} active',
+                                            loading: () => 'Loading',
+                                            error: (_, __) => 'Unavailable',
+                                          ),
+                                icon: isVolunteer
+                                    ? Icons.groups_2_outlined
+                                    : Icons.favorite_outline,
+                                color: isVolunteer
+                                    ? AppTheme.primaryColor
+                                    : AppTheme.successColor,
+                                onTap: () {
+                                  if (isElder) {
+                                    context.pushNamed('health');
+                                    return;
+                                  }
+                                  if (isFamily) {
+                                    context.pushNamed('family-activity');
+                                    return;
+                                  }
+                                  context.goNamed('companions');
+                                },
                               ),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
                               child: _StatusCard(
-                                title: 'Support Requests',
-                                description:
-                                    'Track and respond to active care requests.',
+                                title: isFamily
+                                    ? 'Care Coordination'
+                                    : 'Support Requests',
+                                description: isFamily
+                                    ? 'Review companion visits, open requests, and follow-ups for your family circle.'
+                                    : 'Track and respond to active care requests.',
                                 value: requests.when(
-                                  data: (items) => '${items.length} open',
+                                  data: (items) => isFamily
+                                      ? items.isEmpty
+                                          ? 'All quiet'
+                                          : '${items.length} active'
+                                      : '${items.length} open',
                                   loading: () => 'Loading',
                                   error: (_, __) => 'Unavailable',
                                 ),
-                                icon: Icons.volunteer_activism_outlined,
-                                color: AppTheme.primaryColor,
-                                onTap: () => context.goNamed('companions'),
+                                icon: isFamily
+                                    ? Icons.assignment_turned_in_outlined
+                                    : Icons.volunteer_activism_outlined,
+                                color: isFamily
+                                    ? const Color(0xFF9333EA)
+                                    : AppTheme.primaryColor,
+                                onTap: () => isFamily
+                                    ? context.pushNamed('family-activity')
+                                    : context.goNamed('companions'),
                               ),
                             ),
                           ],
@@ -222,14 +311,15 @@ class HomeScreen extends ConsumerWidget {
                                 user,
                               ),
                             ),
-                            _ActionTile(
-                              label: 'Daily Check-in',
-                              icon: Icons.check_circle_outline,
-                              color: AppTheme.successColor,
-                              subtitle: 'Health update',
-                              onTap: () => context.pushNamed('health'),
-                            ),
-                            if (user.role == AppConstants.roleElder)
+                            if (isElder)
+                              _ActionTile(
+                                label: 'Daily Check-in',
+                                icon: Icons.check_circle_outline,
+                                color: AppTheme.successColor,
+                                subtitle: 'Health update',
+                                onTap: () => context.pushNamed('health'),
+                              ),
+                            if (isElder)
                               _ActionTile(
                                 label: 'Family Hub',
                                 icon: Icons.family_restroom_outlined,
@@ -237,8 +327,7 @@ class HomeScreen extends ConsumerWidget {
                                 subtitle: 'Trusted family',
                                 onTap: () => context.pushNamed('family-hub'),
                               ),
-                            if (user.role == AppConstants.roleElder ||
-                                user.role == AppConstants.roleFamily)
+                            if (isElder || isFamily)
                               _ActionTile(
                                 label: 'Family Chat',
                                 icon: Icons.forum_outlined,
@@ -246,7 +335,7 @@ class HomeScreen extends ConsumerWidget {
                                 subtitle: 'Group updates',
                                 onTap: () => context.pushNamed('family-chat'),
                               ),
-                            if (user.role == AppConstants.roleFamily)
+                            if (isFamily)
                               _ActionTile(
                                 label: 'Care Timeline',
                                 icon: Icons.timeline,
@@ -260,22 +349,13 @@ class HomeScreen extends ConsumerWidget {
                       ],
                     ),
                     const SizedBox(height: 16),
-                    const _SectionCard(
+                    _SectionCard(
                       title: 'Suggested next steps',
-                      accent: Color(0xFFFFEDD5),
+                      accent: const Color(0xFFFFEDD5),
                       icon: Icons.auto_awesome_outlined,
-                      children: [
-                        _NextStepItem(
-                          text: 'Complete your daily health check-in.',
-                        ),
-                        _NextStepItem(
-                          text: 'Review companion requests near you.',
-                        ),
-                        _NextStepItem(
-                          text:
-                              'Start a message or video check-in with your support network.',
-                        ),
-                      ],
+                      children: suggestedNextSteps
+                          .map((step) => _NextStepItem(text: step))
+                          .toList(),
                     ),
                   ],
                 ),
@@ -325,11 +405,17 @@ class HomeScreen extends ConsumerWidget {
 
 class _HeroCard extends StatelessWidget {
   final UserEntity user;
+  final String primaryLabel;
+  final String secondaryLabel;
+  final String description;
   final VoidCallback onPrimaryTap;
   final VoidCallback onSecondaryTap;
 
   const _HeroCard({
     required this.user,
+    required this.primaryLabel,
+    required this.secondaryLabel,
+    required this.description,
     required this.onPrimaryTap,
     required this.onSecondaryTap,
   });
@@ -376,7 +462,7 @@ class _HeroCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Everything important for today is organised here, from wellbeing updates to support requests.',
+                        description,
                         style: TextStyle(
                           color: Colors.white.withValues(alpha: 0.78),
                           fontSize: 14,
@@ -424,34 +510,80 @@ class _HeroCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 18),
-            Row(
-              children: [
-                Expanded(
-                  child: FilledButton(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: const Color(0xFF0F172A),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                    onPressed: onPrimaryTap,
-                    child: const Text('Start check-in'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: OutlinedButton(
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.white,
-                      side: BorderSide(
-                        color: Colors.white.withValues(alpha: 0.5),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final stackButtons = constraints.maxWidth < 360;
+                if (stackButtons) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      FilledButton(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: const Color(0xFF0F172A),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        onPressed: onPrimaryTap,
+                        child: Text(
+                          primaryLabel,
+                          textAlign: TextAlign.center,
+                        ),
                       ),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      const SizedBox(height: 12),
+                      OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          side: BorderSide(
+                            color: Colors.white.withValues(alpha: 0.5),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        onPressed: onSecondaryTap,
+                        child: Text(
+                          secondaryLabel,
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ],
+                  );
+                }
+
+                return Row(
+                  children: [
+                    Expanded(
+                      child: FilledButton(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: const Color(0xFF0F172A),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        onPressed: onPrimaryTap,
+                        child: Text(
+                          primaryLabel,
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
                     ),
-                    onPressed: onSecondaryTap,
-                    child: const Text('View requests'),
-                  ),
-                ),
-              ],
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          side: BorderSide(
+                            color: Colors.white.withValues(alpha: 0.5),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        onPressed: onSecondaryTap,
+                        child: Text(
+                          secondaryLabel,
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
           ],
         ),
@@ -482,12 +614,15 @@ class _HeroPill extends StatelessWidget {
         children: [
           Icon(icon, size: 14, color: Colors.white),
           const SizedBox(width: 6),
-          Text(
-            text,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w700,
-              fontSize: 12,
+          Flexible(
+            child: Text(
+              text,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+                fontSize: 12,
+              ),
             ),
           ),
         ],
@@ -540,11 +675,14 @@ class _SectionCard extends StatelessWidget {
                 child: Icon(icon, color: AppTheme.textPrimary),
               ),
               const SizedBox(width: 12),
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
+              Expanded(
+                child: Text(
+                  title,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ),
             ],

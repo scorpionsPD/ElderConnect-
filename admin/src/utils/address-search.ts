@@ -2,37 +2,13 @@ import { AddressSearchOptions, AddressSuggestion, NominatimSearchResult } from '
 
 const DEFAULT_LIMIT = 6
 
-const getProvider = () => (process.env.NEXT_PUBLIC_ADDRESS_PROVIDER || 'nominatim').toLowerCase()
-
-const isUKPostcode = (query: string) => {
-  // UK postcode regex (simple, covers most cases)
-  return /^[A-Z]{1,2}\d[A-Z\d]? ?\d[A-Z]{2}$/i.test(query.replace(/\s+/g, ''))
-}
-
-const buildGetAddressUrl = (postcode: string) => {
-  // Remove spaces for API
-  const cleanPostcode = postcode.replace(/\s+/g, '')
-  return `https://api.getaddress.io/find/${cleanPostcode}?api-key=${process.env.NEXT_PUBLIC_GETADDRESS_API_KEY}`
-}
-
-const buildNominatimUrl = (query: string, options: AddressSearchOptions = {}) => {
-  const baseUrl = process.env.NEXT_PUBLIC_NOMINATIM_URL || 'https://nominatim.openstreetmap.org/search'
-  const params = new URLSearchParams({
-    q: query,
-    format: 'jsonv2',
-    addressdetails: '1',
-    limit: String(options.limit || DEFAULT_LIMIT),
-  })
-
-  if (options.countryCodes?.length) {
-    params.set('countrycodes', options.countryCodes.join(','))
+const buildEdgeFunctionUrl = () => {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  if (!supabaseUrl) {
+    throw new Error('NEXT_PUBLIC_SUPABASE_URL is not configured')
   }
 
-  if (process.env.NEXT_PUBLIC_NOMINATIM_EMAIL) {
-    params.set('email', process.env.NEXT_PUBLIC_NOMINATIM_EMAIL)
-  }
-
-  return `${baseUrl}?${params.toString()}`
+  return `${supabaseUrl}/functions/v1/address-search`
 }
 
 const mapNominatimResult = (item: NominatimSearchResult): AddressSuggestion => {
@@ -61,49 +37,33 @@ export const searchAddresses = async (
   const trimmedQuery = query.trim()
   if (!trimmedQuery) return []
 
-  const provider = getProvider()
-
-  // Use getAddress.io for UK postcodes
-  if (provider === 'getaddress' && isUKPostcode(trimmedQuery)) {
-    try {
-      const response = await fetch(buildGetAddressUrl(trimmedQuery))
-      if (!response.ok) {
-        throw new Error(`getAddress.io failed with status ${response.status}`)
-      }
-      const data = await response.json()
-      // data.addresses is an array of strings (full addresses)
-      // data.latitude, data.longitude, data.postcode
-      return (data.addresses || []).map((addr: string, idx: number) => ({
-        id: `${data.postcode}-${idx}`,
-        label: addr,
-        formattedAddress: addr,
-        latitude: data.latitude,
-        longitude: data.longitude,
-        postcode: data.postcode,
-        city: undefined,
-        state: undefined,
-        country: 'United Kingdom',
-      }))
-    } catch (error) {
-      console.error('getAddress.io error:', error)
-      // fallback to Nominatim
-    }
-  }
-
-  // Default: Nominatim
   try {
-    const response = await fetch(buildNominatimUrl(trimmedQuery, options), {
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    const response = await fetch(buildEdgeFunctionUrl(), {
+      method: 'POST',
       headers: {
+        'Content-Type': 'application/json',
         Accept: 'application/json',
+        ...(supabaseAnonKey
+          ? {
+              apikey: supabaseAnonKey,
+              Authorization: `Bearer ${supabaseAnonKey}`,
+            }
+          : {}),
       },
+      body: JSON.stringify({
+        query: trimmedQuery,
+        limit: options.limit || DEFAULT_LIMIT,
+        countryCodes: options.countryCodes,
+      }),
     })
 
     if (!response.ok) {
       throw new Error(`Address search failed with status ${response.status}`)
     }
 
-    const data = (await response.json()) as NominatimSearchResult[]
-    return Array.isArray(data) ? data.map(mapNominatimResult) : []
+    const payload = (await response.json()) as { success?: boolean; results?: AddressSuggestion[] }
+    return Array.isArray(payload.results) ? payload.results : []
   } catch (error) {
     console.error('Address search error:', error)
     return []

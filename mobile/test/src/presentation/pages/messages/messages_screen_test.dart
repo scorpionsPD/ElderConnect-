@@ -139,6 +139,7 @@ class FakeMessagingRepository implements MessagingRepository {
   Future<Either<Failure, List<MessageEntity>>> getConversation({
     required String userId,
     required String recipientId,
+    String? requestId,
   }) async =>
       const Right([]);
 
@@ -169,6 +170,7 @@ class FakeMessagingRepository implements MessagingRepository {
   Stream<List<MessageEntity>> watchConversation({
     required String userId,
     required String recipientId,
+    String? requestId,
   }) async* {
     yield [];
   }
@@ -197,6 +199,7 @@ class FakeMessagingRepository implements MessagingRepository {
   Stream<bool> watchTypingStatus({
     required String userId,
     required String recipientId,
+    String? requestId,
   }) async* {
     yield false;
   }

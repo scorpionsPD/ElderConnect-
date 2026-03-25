@@ -42,8 +42,8 @@ const volunteerNavigation = [
 
 const familyNavigation = [
   { name: 'Family Dashboard', href: '/family-dashboard', icon: UserCircle },
-  { name: 'Elder Updates', href: '/family-dashboard?tab=updates', icon: Heart },
-  { name: 'Communication', href: '/family-dashboard?tab=communication', icon: Users },
+  { name: 'Care Timeline', href: '/family-dashboard?tab=updates', icon: Heart },
+  { name: 'Family Circle', href: '/family-dashboard?tab=communication', icon: Users },
   { name: 'Settings', href: '/settings', icon: Settings },
 ]
 
@@ -61,7 +61,7 @@ export default function Layout({ children }: LayoutProps) {
   
   // Get display name - use actual first and last name from user
   const userName = user ? user.first_name || 'User' : 'User'
-  const userEmail = user?.email || 'user@elderconnect.com'
+  const userEmail = user?.email || 'user@scotitech.com'
   
   // Get user initials for avatar
   const getInitials = () => {

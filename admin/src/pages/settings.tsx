@@ -9,7 +9,6 @@ import Tabs from '@/components/Tabs'
 import Button from '@/components/Button'
 import Input from '@/components/Input'
 import AddressAutocomplete from '@/components/AddressAutocomplete'
-import { reverseGeocodeCoordinates } from '@/utils/address-search'
 import { useToast } from '@/contexts/ToastContext'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/utils/supabase'
@@ -38,7 +37,6 @@ export default function SettingsPage() {
   const toast = useToast()
   const [activeTab, setActiveTab] = useState<TabType>('profile')
   const [loading, setLoading] = useState(false)
-  const [locating, setLocating] = useState(false)
   const { user, updateUserProfile } = useAuth()
 
   // Password change state
@@ -169,62 +167,6 @@ export default function SettingsPage() {
       setProfileData((prev) => ({ ...prev, profilePictureUrl: result }))
     }
     reader.readAsDataURL(file)
-  }
-
-  const handleUseCurrentLocation = async () => {
-    if (typeof window === 'undefined' || !navigator.geolocation) {
-      toast.error('Location is not supported in this browser.')
-      return
-    }
-
-    setLocating(true)
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        try {
-          const suggestion = await reverseGeocodeCoordinates(
-            position.coords.latitude,
-            position.coords.longitude
-          )
-
-          if (!suggestion) {
-            toast.error('Unable to resolve your current address.')
-            return
-          }
-
-          const addressLine1 = suggestion.addressLine1 || suggestion.formattedAddress.split(',')[0]?.trim() || ''
-          const city = suggestion.city || ''
-          const postcode = suggestion.postcode || ''
-
-          setProfileData((prev) => ({
-            ...prev,
-            address: suggestion.formattedAddress,
-            addressLine1,
-            city,
-            postcode,
-          }))
-          toast.success('Current address loaded.')
-        } finally {
-          setLocating(false)
-        }
-      },
-      (error) => {
-        setLocating(false)
-        if (error.code === error.PERMISSION_DENIED) {
-          toast.error('Location permission was denied.')
-          return
-        }
-        if (error.code === error.POSITION_UNAVAILABLE) {
-          toast.error('Current location is unavailable.')
-          return
-        }
-        if (error.code === error.TIMEOUT) {
-          toast.error('Location request timed out.')
-          return
-        }
-        toast.error('Unable to fetch your current location.')
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
-    )
   }
 
   const handleProfileSave = async () => {
@@ -481,14 +423,7 @@ export default function SettingsPage() {
                           }
                           placeholder="Search your address or postcode"
                         />
-                        <div className="mt-3 flex flex-wrap gap-3">
-                          <Button
-                            text={locating ? 'Locating...' : 'Use Current Location'}
-                            icon={<MapPin className="h-4 w-4" />}
-                            onClick={handleUseCurrentLocation}
-                            loading={locating}
-                            variant="secondary"
-                          />
+                        <div className="mt-3">
                           {(profileData.addressLine1 || profileData.city || profileData.postcode) && (
                             <p className="text-sm text-gray-600">
                               {[profileData.addressLine1, profileData.city, profileData.postcode]

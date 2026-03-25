@@ -15,6 +15,8 @@ interface SignupRequest {
   bio?: string
 }
 
+const OTP_VERIFICATION_WINDOW_MINUTES = 15
+
 interface SignupResponse {
   success: boolean
   message?: string
@@ -50,9 +52,10 @@ serve(async (req: Request) => {
   try {
     const body: SignupRequest = await req.json()
     const { email, role, first_name, last_name, phone_number, date_of_birth, address_line_1, address_line_2, city, postcode, bio } = body
+    const normalizedEmail = email?.trim().toLowerCase()
 
     // Validate required fields
-    if (!email || !role || !first_name) {
+    if (!normalizedEmail || !role || !first_name) {
       return new Response(
         JSON.stringify({
           success: false,
@@ -63,7 +66,7 @@ serve(async (req: Request) => {
     }
 
     // Validate email format
-    if (!isValidEmail(email)) {
+    if (!isValidEmail(normalizedEmail)) {
       return new Response(
         JSON.stringify({ success: false, error: 'Invalid email format' }),
         { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
@@ -91,11 +94,47 @@ serve(async (req: Request) => {
 
     const supabase = createClient(supabaseUrl, supabaseKey)
 
+    const verificationCutoff = new Date(
+      Date.now() - OTP_VERIFICATION_WINDOW_MINUTES * 60 * 1000,
+    ).toISOString()
+
+    const { data: verifiedOtp, error: otpVerificationError } = await supabase
+      .from('otp_codes')
+      .select('id, used_at')
+      .ilike('email', normalizedEmail)
+      .eq('is_used', true)
+      .not('used_at', 'is', null)
+      .gte('used_at', verificationCutoff)
+      .order('used_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (otpVerificationError) {
+      console.error('OTP verification lookup error:', otpVerificationError)
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'Failed to verify OTP confirmation. Please try again.'
+        }),
+        { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+      )
+    }
+
+    if (!verifiedOtp) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'Please verify your email with OTP before signing up.'
+        }),
+        { status: 403, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+      )
+    }
+
     // Check if user already exists
     const { data: existingUser } = await supabase
       .from('users')
       .select('id')
-      .eq('email', email)
+      .eq('email', normalizedEmail)
       .single()
 
     if (existingUser) {
@@ -114,7 +153,7 @@ serve(async (req: Request) => {
       .from('users')
       .insert({
         id: userId,
-        email,
+        email: normalizedEmail,
         role,
         first_name,
         last_name: last_name || '',
@@ -147,7 +186,6 @@ serve(async (req: Request) => {
     }
 
     if (role === 'FAMILY') {
-      const normalizedEmail = email.trim().toLowerCase()
       const { data: pendingInvites } = await supabase
         .from('family_invitations')
         .select('id, elder_id, relationship, access_level')
@@ -189,7 +227,7 @@ serve(async (req: Request) => {
         resource_type: 'USER',
         resource_id: userId,
         changes: {
-          email,
+          email: normalizedEmail,
           role,
           first_name,
           last_name

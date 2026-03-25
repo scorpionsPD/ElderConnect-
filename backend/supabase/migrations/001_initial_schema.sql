@@ -495,6 +495,17 @@ CREATE POLICY "Users can view their messages"
     sender_id = auth.uid() OR recipient_id = auth.uid()
   );
 
+-- Messages: senders can insert their own messages
+CREATE POLICY "Users can send messages"
+  ON messages FOR INSERT
+  WITH CHECK (sender_id = auth.uid());
+
+-- Messages: recipients can mark as read
+CREATE POLICY "Recipients can update message read status"
+  ON messages FOR UPDATE
+  USING (recipient_id = auth.uid())
+  WITH CHECK (recipient_id = auth.uid());
+
 -- Emergency alerts: admins and volunteers can view
 CREATE POLICY "Admins and volunteers can view emergency alerts"
   ON emergency_alerts FOR SELECT

@@ -6,6 +6,8 @@ interface UserProfile {
   email: string
   first_name: string
   last_name: string
+  is_active: boolean
+  is_verified: boolean
   phone_number?: string
   role: string
   profile_picture_url?: string
@@ -21,6 +23,8 @@ interface UserProfile {
   accessibility_high_contrast: boolean
   accessibility_voice_enabled: boolean
   preferred_language: string
+  created_at?: string
+  updated_at?: string
 }
 
 interface UpdateProfileRequest {
@@ -246,6 +250,8 @@ function formatUserProfile(user: Record<string, any>): UserProfile {
     email: user.email,
     first_name: user.first_name,
     last_name: user.last_name,
+    is_active: user.is_active ?? true,
+    is_verified: user.is_verified ?? false,
     phone_number: user.phone_number,
     role: user.role,
     profile_picture_url: user.profile_picture_url,
@@ -260,6 +266,8 @@ function formatUserProfile(user: Record<string, any>): UserProfile {
     accessibility_large_fonts: user.accessibility_large_fonts || false,
     accessibility_high_contrast: user.accessibility_high_contrast || false,
     accessibility_voice_enabled: user.accessibility_voice_enabled || false,
-    preferred_language: user.preferred_language || 'en'
+    preferred_language: user.preferred_language || 'en',
+    created_at: user.created_at,
+    updated_at: user.updated_at,
   }
 }

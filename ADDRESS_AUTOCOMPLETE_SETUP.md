@@ -1,27 +1,29 @@
 # Address Autocomplete API Setup Guide
 
-Your ElderConnect+ app now uses **Nominatim (OpenStreetMap)** for address autocomplete by default—completely **free and open-source**.
+Your ElderConnect+ app now uses **OS Places** through a **secure Supabase Edge Function proxy** for postcode and street address lookup in both **web** and **mobile** apps.
 
 ## Currently Configured (Default)
 
-**Nominatim/OpenStreetMap**
-- **Cost**: FREE (with fair-use policy)
-- **Accuracy**: Good for most worldwide addresses and postcodes (especially UK, US, EU)
-- **Setup**: Already implemented in the app
-- **Usage Policy**: No API key required; requests should include an email for usage monitoring
-- **Rate Limit**: 1 request/second for free tier (commercial use encouraged to self-host)
-- **No account needed**
+**OS Places (via Edge Function)**
+- **Coverage**: UK-focused addressing and postcode lookup
+- **Security**: API credentials are server-side only (never exposed to browser/app client)
+- **Setup**: Implemented in `backend/supabase/functions/address-search/index.ts`
+- **Client usage**: Web + mobile call `/functions/v1/address-search`
 
 ### Environment Variables (Optional)
 
 ```bash
-# admin/.env.local
-NEXT_PUBLIC_ADDRESS_PROVIDER=nominatim
-NEXT_PUBLIC_NOMINATIM_URL=https://nominatim.openstreetmap.org/search
-NEXT_PUBLIC_NOMINATIM_EMAIL=info@scotitech.com
+# Supabase function secrets (recommended)
+OS_PLACES_API_KEY=your_os_places_api_key
+OS_PLACES_API_SECRET=your_os_places_api_secret
+OS_PLACES_BASE_URL=https://api.os.uk/search/places/v1/find
 ```
 
-**Note**: `NEXT_PUBLIC_NOMINATIM_EMAIL` is optional but recommended—it helps OSM monitor usage and contact you if there are issues.
+Set these as Supabase secrets, for example:
+
+```bash
+supabase secrets set OS_PLACES_API_KEY=... OS_PLACES_API_SECRET=...
+```
 
 ---
 

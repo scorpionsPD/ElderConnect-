@@ -12,7 +12,6 @@ import Tabs from '@/components/Tabs'
 import Card from '@/components/Card'
 import Badge from '@/components/Badge'
 import Button from '@/components/Button'
-import { useStats } from '@/hooks/useStats'
 import { useElders } from '@/hooks/useElders'
 import { useCompanionRequests } from '@/hooks/useCompanionRequests'
 import { usePreferences } from '@/hooks/usePreferences'
@@ -52,9 +51,8 @@ export default function FamilyDashboard() {
   const router = useRouter()
   const { user } = useAuth()
   const toast = useToast()
-  
+
   // Hooks for data
-  const stats = useStats()
   const { elders, addElder, removeElder, updateElder, loading: eldersLoading, error: eldersError } = useElders()
   const { requests, loading: requestsLoading } = useCompanionRequests()
   const { messages: familyMessages, loading: familyMessagesLoading, sending: sendingFamilyMessage, error: familyMessagesError, fetchMessages: fetchFamilyMessages, sendMessage: sendFamilyMessage } = useFamilyMessages()
@@ -144,9 +142,9 @@ export default function FamilyDashboard() {
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: <Heart className="w-4 h-4" /> },
-    { id: 'elders', label: 'Connected Elders', icon: <Users className="w-4 h-4" /> },
-    { id: 'activities', label: 'Activities', icon: <Calendar className="w-4 h-4" /> },
-    { id: 'messages', label: 'Messages', icon: <MessageSquare className="w-4 h-4" /> },
+    { id: 'elders', label: 'Care Network', icon: <Users className="w-4 h-4" /> },
+    { id: 'activities', label: 'Care Timeline', icon: <Calendar className="w-4 h-4" /> },
+    { id: 'messages', label: 'Family Circle', icon: <MessageSquare className="w-4 h-4" /> },
     { id: 'settings', label: 'Settings', icon: <Settings className="w-4 h-4" /> },
   ]
 
@@ -200,9 +198,42 @@ export default function FamilyDashboard() {
     .slice(0, 8)
   const openRequestCount = familyRequests.filter((item) => ['PENDING', 'ACCEPTED', 'IN_PROGRESS'].includes(item.status)).length
   const completedRequestCount = familyRequests.filter((item) => item.status === 'COMPLETED').length
+  const careActivityThisMonth = familyRequests.filter((request) => {
+    const requestDate = new Date(request.requested_date)
+    const now = new Date()
+    return requestDate.getMonth() === now.getMonth() && requestDate.getFullYear() === now.getFullYear()
+  }).length
+  const latestHealthCheckin = elderHealthCheckins[0]
+  const latestHealthAlerts = (() => {
+    if (!latestHealthCheckin) return [] as string[]
+    const alerts: string[] = []
+    if (latestHealthCheckin.energy_level <= 3) {
+      alerts.push('Low energy reported in the latest check-in')
+    }
+    if (latestHealthCheckin.sleep_hours < 5) {
+      alerts.push('Sleep was below 5 hours in the latest update')
+    }
+    if (!latestHealthCheckin.medications_taken) {
+      alerts.push('Medication was marked as not taken')
+    }
+    if (['SAD', 'ANXIOUS'].includes((latestHealthCheckin.mood || '').toUpperCase())) {
+      alerts.push(`Mood is flagged as ${latestHealthCheckin.mood.toLowerCase()}`)
+    }
+    return alerts
+  })()
 
   const getElderName = (elderId: string) =>
     elders.find((item) => item.elder_user_id === elderId)?.elder?.first_name || 'Connected Elder'
+
+  const formatRequestStatus = (status: string) => {
+    const normalized = status.replace(/_/g, ' ').toLowerCase()
+    return normalized.charAt(0).toUpperCase() + normalized.slice(1)
+  }
+
+  const formatActivityType = (activityType: string) => {
+    const normalized = activityType.replace(/_/g, ' ').toLowerCase()
+    return normalized.charAt(0).toUpperCase() + normalized.slice(1)
+  }
 
   const loadElderHealthCheckins = useCallback(async (elderId: string) => {
     setLoadingElderHealth(true)
@@ -305,7 +336,7 @@ export default function FamilyDashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600">Elders Connected</p>
-                  <p className="text-3xl font-bold text-blue-600">{stats.eldersConnected}</p>
+                  <p className="text-3xl font-bold text-blue-600">{elders.length}</p>
                   <p className="text-xs text-gray-500">In your family</p>
                 </div>
                 <Users className="w-12 h-12 text-blue-200" />
@@ -315,9 +346,9 @@ export default function FamilyDashboard() {
             <Card className="bg-green-50 border-green-200">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Volunteer Matches</p>
-                  <p className="text-3xl font-bold text-green-600">{stats.upcomingVisits}</p>
-                  <p className="text-xs text-gray-500">Active matches</p>
+                  <p className="text-sm text-gray-600">Open Care Requests</p>
+                  <p className="text-3xl font-bold text-green-600">{openRequestCount}</p>
+                  <p className="text-xs text-gray-500">Support currently in progress</p>
                 </div>
                 <TrendingUp className="w-12 h-12 text-green-200" />
               </div>
@@ -326,9 +357,9 @@ export default function FamilyDashboard() {
             <Card className="bg-purple-50 border-purple-200">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">This Month</p>
-                  <p className="text-3xl font-bold text-purple-600">{stats.activitiesThisMonth}</p>
-                  <p className="text-xs text-gray-500">Activities</p>
+                  <p className="text-sm text-gray-600">Care Updates This Month</p>
+                  <p className="text-3xl font-bold text-purple-600">{careActivityThisMonth}</p>
+                  <p className="text-xs text-gray-500">Requests and care events</p>
                 </div>
                 <Calendar className="w-12 h-12 text-purple-200" />
               </div>
@@ -389,21 +420,21 @@ export default function FamilyDashboard() {
                   </div>
                 </Card>
 
-                {/* Recent Messages */}
+                {/* Recent Activity */}
                 <Card>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Companion Updates</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Care Activity</h3>
                   <div className="space-y-3">
                     {requestsLoading ? (
                       <p className="text-sm text-gray-600">Loading updates...</p>
                     ) : recentFamilyRequests.length === 0 ? (
-                      <p className="text-sm text-gray-600">No activity updates yet</p>
+                      <p className="text-sm text-gray-600">No care activity updates yet</p>
                     ) : (
                       recentFamilyRequests.slice(0, 4).map((request) => (
                         <div key={request.id} className="p-3 rounded-lg border border-gray-200">
-                          <p className="text-sm font-semibold text-gray-900">{request.activity_type}</p>
+                          <p className="text-sm font-semibold text-gray-900">{formatActivityType(request.activity_type)}</p>
                           <p className="text-xs text-gray-600">For: {getElderName(request.elder_id)}</p>
                           <p className="text-xs text-gray-500">
-                            Status: {request.status} · {new Date(request.requested_date).toLocaleDateString()}
+                            Status: {formatRequestStatus(request.status)} · {new Date(request.requested_date).toLocaleDateString()}
                           </p>
                         </div>
                       ))
@@ -419,10 +450,13 @@ export default function FamilyDashboard() {
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
                   <div className="space-y-2">
                     <Button className="w-full" variant="secondary" onClick={() => setActiveTab('messages')}>
-                      Contact Elder
+                      Open Family Circle
                     </Button>
                     <Button className="w-full" variant="secondary" onClick={() => setActiveTab('activities')}>
-                      View Calendar
+                      Review Care Timeline
+                    </Button>
+                    <Button className="w-full" variant="secondary" onClick={() => setShowAddElderModal(true)}>
+                      Add Another Elder
                     </Button>
                   </div>
                 </Card>
@@ -431,9 +465,33 @@ export default function FamilyDashboard() {
                 <Card>
                   <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                     <AlertCircle className="w-4 h-4 text-amber-500" />
-                    Health Alerts
+                    Wellbeing Watch
                   </h3>
-                  <p className="text-sm text-gray-600">No health alerts</p>
+                  {!selectedElderId ? (
+                    <p className="text-sm text-gray-600">Select an elder in Family Circle to review the latest wellbeing update.</p>
+                  ) : loadingElderHealth ? (
+                    <p className="text-sm text-gray-600">Checking latest wellbeing updates...</p>
+                  ) : !latestHealthCheckin ? (
+                    <p className="text-sm text-gray-600">No health check-ins yet for this elder.</p>
+                  ) : latestHealthAlerts.length === 0 ? (
+                    <div className="space-y-2">
+                      <p className="text-sm text-green-700 font-medium">No urgent concerns in the latest check-in.</p>
+                      <p className="text-xs text-gray-500">
+                        Last update: {new Date(latestHealthCheckin.checkin_date).toLocaleString()}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {latestHealthAlerts.map((alert) => (
+                        <div key={alert} className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-sm text-amber-800">
+                          {alert}
+                        </div>
+                      ))}
+                      <p className="text-xs text-gray-500">
+                        Last update: {new Date(latestHealthCheckin.checkin_date).toLocaleString()}
+                      </p>
+                    </div>
+                  )}
                 </Card>
               </div>
             </div>
@@ -766,32 +824,32 @@ export default function FamilyDashboard() {
           {/* Activities Tab */}
           {activeTab === 'activities' && (
             <Card>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Family Activities</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Care Timeline</h3>
               <div className="space-y-3">
                 <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
-                  <span className="text-sm text-gray-700">Open companion requests</span>
+                  <span className="text-sm text-gray-700">Open care requests</span>
                   <span className="font-semibold text-gray-900">{openRequestCount}</span>
                 </div>
                 <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
-                  <span className="text-sm text-gray-700">Completed requests</span>
+                  <span className="text-sm text-gray-700">Completed support visits</span>
                   <span className="font-semibold text-gray-900">{completedRequestCount}</span>
                 </div>
                 <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
-                  <span className="text-sm text-gray-700">Connected elders</span>
-                  <span className="font-semibold text-gray-900">{elders.length}</span>
+                  <span className="text-sm text-gray-700">Updates this month</span>
+                  <span className="font-semibold text-gray-900">{careActivityThisMonth}</span>
                 </div>
               </div>
               <div className="mt-6 border-t border-gray-200 pt-4 space-y-3">
-                <h4 className="text-sm font-semibold text-gray-900">Recent Request Timeline</h4>
+                <h4 className="text-sm font-semibold text-gray-900">Recent Care Events</h4>
                 {requestsLoading ? (
                   <p className="text-sm text-gray-600">Loading timeline...</p>
                 ) : recentFamilyRequests.length === 0 ? (
-                  <p className="text-sm text-gray-600">No companion activity yet for connected elders.</p>
+                  <p className="text-sm text-gray-600">No care activity yet for connected elders.</p>
                 ) : (
                   recentFamilyRequests.map((request) => (
                     <div key={request.id} className="border border-gray-200 rounded-lg p-3">
-                      <p className="text-sm font-semibold text-gray-900">{request.activity_type}</p>
-                      <p className="text-xs text-gray-600">{getElderName(request.elder_id)} · {request.status}</p>
+                      <p className="text-sm font-semibold text-gray-900">{formatActivityType(request.activity_type)}</p>
+                      <p className="text-xs text-gray-600">{getElderName(request.elder_id)} · {formatRequestStatus(request.status)}</p>
                       <p className="text-xs text-gray-500">{new Date(request.requested_date).toLocaleString()}</p>
                     </div>
                   ))

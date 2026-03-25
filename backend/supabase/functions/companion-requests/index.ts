@@ -335,84 +335,43 @@ serve(async (req: Request) => {
         return jsonResponse(400, { success: false, error: 'Only accepted or in-progress requests can be completed' })
       }
 
-      const confirmerRole: ConfirmationRole = isElder ? 'ELDER' : 'VOLUNTEER'
+      const { data: finalRequest, error: updateError } = await supabase
+        .from('companion_requests')
+        .update({
+          status: 'COMPLETED',
+          completed_date: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', requestId)
+        .select('*')
+        .single()
 
-      const existingConfirmation = await hasCompletionConfirmation(supabase, requestId, confirmerRole)
+      if (updateError || !finalRequest) {
+        return jsonResponse(500, { success: false, error: 'Failed to complete request' })
+      }
 
-      if (!existingConfirmation || existingConfirmation.length === 0) {
-        const logged = await insertCompanionAuditLog(supabase, {
+      await supabase
+        .from('audit_logs')
+        .insert({
           user_id: userId,
           action: 'UPDATE',
+          resource_type: 'COMPANION_REQUEST',
           resource_id: requestId,
           changes: {
-            completion_confirmation: true,
-            confirmed_by_role: confirmerRole,
-          },
-        })
-        if (!logged) {
-          return jsonResponse(500, { success: false, error: 'Failed to store completion confirmation' })
-        }
-      }
-
-      const completion = await getCompletionState(supabase, requestId)
-
-      let finalRequest = request
-      let message =
-        confirmerRole === 'ELDER'
-          ? 'Completion confirmation sent to volunteer'
-          : 'Completion confirmation sent to elder'
-
-      if (completion.elder_confirmed && completion.volunteer_confirmed) {
-        const { data: updatedRequest, error: updateError } = await supabase
-          .from('companion_requests')
-          .update({
             status: 'COMPLETED',
-            completed_date: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', requestId)
-          .select('*')
-          .single()
-
-        if (updateError || !updatedRequest) {
-          return jsonResponse(500, { success: false, error: 'Failed to complete request' })
-        }
-
-        finalRequest = updatedRequest
-        message = 'Both sides confirmed. Request completed successfully'
-
-        await supabase
-          .from('audit_logs')
-          .insert({
-            user_id: userId,
-            action: 'UPDATE',
-            resource_type: 'COMPANION_REQUEST',
-            resource_id: requestId,
-            changes: { status: 'COMPLETED' },
-            created_at: new Date().toISOString(),
-          })
-      } else {
-        if (request.status !== 'IN_PROGRESS') {
-          const { data: updatedRequest, error: progressError } = await supabase
-            .from('companion_requests')
-            .update({
-              status: 'IN_PROGRESS',
-              updated_at: new Date().toISOString(),
-            })
-            .eq('id', requestId)
-            .select('*')
-            .single()
-
-          if (!progressError && updatedRequest) {
-            finalRequest = updatedRequest
-          }
-        }
-      }
+            completed_by_role: isElder ? 'ELDER' : 'VOLUNTEER',
+          },
+          created_at: new Date().toISOString(),
+        })
 
       return jsonResponse(200, {
         success: true,
-        message,
-        data: withCompletionState(finalRequest, completion),
+        message: 'Request completed successfully',
+        data: withCompletionState(finalRequest, {
+          elder_confirmed: true,
+          volunteer_confirmed: true,
+          waiting_for: null,
+        }),
       })
     } catch (error) {
       console.error('Error:', error)
@@ -657,7 +616,7 @@ function jsonResponse(status: number, payload: Record<string, unknown>) {
 
 async function hasCompletionConfirmation(supabase: any, requestId: string, role: ConfirmationRole) {
   const rows = await fetchCompletionConfirmationRows(supabase, requestId)
-  return rows.filter((row) => row.confirmed_by_role === role)
+  return rows.filter((row: any) => row.confirmed_by_role === role)
 }
 
 async function fetchCompletionConfirmationRows(supabase: any, singleRequestId?: string, requestIds?: string[]) {
