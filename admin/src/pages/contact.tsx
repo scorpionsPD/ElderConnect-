@@ -22,6 +22,10 @@ export default function ContactPage() {
     <PublicLayout>
       <Head>
         <title>Contact Us - ElderConnect+</title>
+        <meta
+          name="description"
+          content="Contact the ElderConnect+ team with launch questions, feedback, support requests, or partnership enquiries."
+        />
       </Head>
 
       <div className="max-w-4xl mx-auto px-4 py-12">
@@ -38,8 +42,8 @@ export default function ContactPage() {
               <Mail className="w-6 h-6 text-green-600" />
             </div>
             <h3 className="font-semibold text-gray-900 mb-2">Email</h3>
-            <p className="text-gray-600">hello@elderconnect.com</p>
-            <p className="text-gray-500 text-sm">We respond within 24 hours</p>
+            <p className="text-gray-600">hello@scotitech.com</p>
+            <p className="text-gray-500 text-sm">We aim to respond as promptly as possible.</p>
           </div>
 
         </div>
@@ -48,7 +52,7 @@ export default function ContactPage() {
           <div className="bg-green-50 rounded-2xl p-12 text-center">
             <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Message Sent!</h2>
-            <p className="text-gray-600">We&apos;ll get back to you within 24 hours.</p>
+            <p className="text-gray-600">We&apos;ll review your message and respond as soon as we can.</p>
           </div>
         ) : (
           <div className="bg-white rounded-2xl p-8 shadow-sm">

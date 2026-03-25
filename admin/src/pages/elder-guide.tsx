@@ -23,7 +23,7 @@ const activities = [
 
 const faqs = [
   { question: 'Is ElderConnect+ free?', answer: 'Yes! Our services are completely free for seniors.' },
-  { question: 'Are the volunteers safe?', answer: 'All volunteers undergo background checks and training.' },
+  { question: 'Are the volunteers safe?', answer: 'The platform includes profile visibility, request history, family access, and emergency tools to support safer connections.' },
   { question: 'Can I choose my companion?', answer: 'Yes! You can accept or decline any match.' },
   { question: 'What if I need help in an emergency?', answer: 'Use our one-touch emergency button anytime.' },
 ];
@@ -33,6 +33,10 @@ export default function ElderGuidePage() {
     <PublicLayout>
       <Head>
         <title>Elder Guide - ElderConnect+</title>
+        <meta
+          name="description"
+          content="A simple guide to getting started with ElderConnect+ for elders who want companionship, connection, and support."
+        />
       </Head>
 
       {/* Hero */}
@@ -93,10 +97,10 @@ export default function ElderGuidePage() {
           </div>
           <div className="grid md:grid-cols-2 gap-4">
             {[
-              'All volunteers are background-checked',
-              'Identity verification required',
-              'Mandatory safety training',
-              'Regular check-ins during visits',
+              'Profile details and family visibility support safer coordination',
+              'Emergency actions are available in the app',
+              'Visit activity and communication stay visible in the platform',
+              'You can stop a visit or raise a concern at any time',
               'One-touch emergency button',
               'Family notifications available',
             ].map((item, index) => (
@@ -159,12 +163,12 @@ export default function ElderGuidePage() {
           </div>
           <div className="grid md:grid-cols-2 gap-4">
             <div className="bg-gray-50 rounded-xl p-4">
-              <p className="text-sm text-gray-500 mb-1">Call Us</p>
-              <p className="text-lg font-semibold text-gray-900">1-800-ELDER-HELP</p>
+              <p className="text-sm text-gray-500 mb-1">Need assistance?</p>
+              <p className="text-lg font-semibold text-gray-900">Use the contact page or dashboard support tools</p>
             </div>
             <div className="bg-gray-50 rounded-xl p-4">
               <p className="text-sm text-gray-500 mb-1">Email Us</p>
-              <p className="text-lg font-semibold text-gray-900">help@elderconnect.com</p>
+              <p className="text-lg font-semibold text-gray-900">help@scotitech.com</p>
             </div>
           </div>
         </section>

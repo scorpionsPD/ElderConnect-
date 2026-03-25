@@ -27,15 +27,15 @@ const faqs = {
   volunteers: [
     {
       question: 'What are the requirements to volunteer?',
-      answer: 'You must be at least 18 years old, pass a background check, provide references, and complete our training program.',
+      answer: 'At launch, volunteer onboarding focuses on profile details, availability, and agreement to community standards. Additional verification steps may be introduced as the programme grows.',
     },
     {
       question: 'How much time do I need to commit?',
-      answer: 'We ask for a minimum commitment of 2-4 hours per week for at least 6 months. Consistency is important for building meaningful relationships.',
+      answer: 'There is no fixed minimum at launch, but consistent availability helps make better matches and follow-through more reliable.',
     },
     {
       question: 'What training is provided?',
-      answer: 'We provide free online training covering communication with seniors, safety protocols, recognizing health concerns, and how to use our platform. About 4 hours total.',
+      answer: 'The launch experience includes in-product guidance, clear expectations, and communication tools. More formal training can be layered in as the programme expands.',
     },
   ],
   family: [
@@ -45,7 +45,7 @@ const faqs = {
     },
     {
       question: 'How do I know the volunteers are trustworthy?',
-      answer: 'All volunteers undergo comprehensive background checks, provide references, and complete our training program. We also have regular check-ins and monitoring.',
+      answer: 'Families can review profiles, activity context, companion request history, and communication inside the platform. Safeguarding and verification processes can be expanded as operations grow.',
     },
   ],
 };
@@ -86,6 +86,10 @@ export default function FAQPage() {
     <PublicLayout>
       <Head>
         <title>FAQ - ElderConnect+</title>
+        <meta
+          name="description"
+          content="Find answers to common questions about ElderConnect+ for elders, volunteers, and families."
+        />
       </Head>
 
       <div className="max-w-4xl mx-auto px-4 py-12">

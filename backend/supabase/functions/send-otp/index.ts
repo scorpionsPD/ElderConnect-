@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import nodemailer from 'npm:nodemailer@6.9.16'
 import { corsHeaders } from '../_shared/cors.ts'
 
 interface SendOTPRequest {
@@ -16,66 +17,131 @@ interface SendOTPResponse {
 }
 
 /**
- * Send OTP email via Resend API
+ * Send OTP email via SMTP when configured, otherwise fall back to Resend.
  */
 async function sendOTPEmail(email: string, otp: string): Promise<{ sent: boolean; error?: string }> {
+  const emailProvider = (Deno.env.get('EMAIL_PROVIDER') || 'auto').toLowerCase()
+  const smtpHost = Deno.env.get('EMAIL_HOST')
+  const smtpPort = Number(Deno.env.get('EMAIL_PORT') || '465')
+  const smtpSecure = (Deno.env.get('EMAIL_SECURE') || 'true').toLowerCase() === 'true'
+  const smtpUser = Deno.env.get('EMAIL_USER')
+  const smtpPassword = Deno.env.get('EMAIL_PASSWORD')
   const resendApiKey = Deno.env.get('RESEND_API_KEY')
   const fromName = Deno.env.get('EMAIL_FROM_NAME') || 'ElderConnect+'
-  const fromEmail = Deno.env.get('EMAIL_FROM') || 'onboarding@resend.dev'
+  const smtpFromEmail = Deno.env.get('EMAIL_FROM') || smtpUser || 'onboarding@resend.dev'
+  const resendFromEmail = Deno.env.get('RESEND_FROM') || 'onboarding@resend.dev'
 
   console.log('[DEBUG] Email config check:', {
+    emailProvider,
+    hasSmtpHost: !!smtpHost,
+    hasSmtpUser: !!smtpUser,
+    hasSmtpPassword: !!smtpPassword,
     hasApiKey: !!resendApiKey,
-    fromEmail,
+    smtpFromEmail,
+    resendFromEmail,
     fromName
   })
 
-  if (!resendApiKey) {
+  if (!smtpHost && !resendApiKey) {
     console.error('[ERROR] Email config missing')
     return {
       sent: false,
-      error: 'Email provider is not configured. Set RESEND_API_KEY.'
+      error: 'Email provider is not configured. Set SMTP credentials or RESEND_API_KEY.'
+    }
+  }
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+        <h1 style="color: #333; margin: 0; font-size: 24px;">Your ElderConnect+ OTP</h1>
+      </div>
+      
+      <p style="color: #666; font-size: 16px; margin-bottom: 20px;">
+        Thank you for using ElderConnect+. Here's your one-time password to complete your login:
+      </p>
+      
+      <div style="background-color: #f0f4ff; padding: 30px; border-radius: 8px; text-align: center; margin: 30px 0;">
+        <p style="margin: 0; font-size: 12px; color: #999; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 10px;">
+          Your Code
+        </p>
+        <p style="margin: 0; font-size: 48px; font-weight: bold; color: #4f46e5; letter-spacing: 8px;">
+          ${otp}
+        </p>
+      </div>
+      
+      <p style="color: #999; font-size: 14px; margin: 20px 0;">
+        This code will expire in 10 minutes.
+      </p>
+      
+      <div style="border-top: 1px solid #eee; padding-top: 20px; margin-top: 30px;">
+        <p style="color: #999; font-size: 12px; margin: 0;">
+          <strong>Security Notice:</strong> If you didn't request this code, please ignore this email. 
+          Your account is secure and no one can access it without this code.
+        </p>
+      </div>
+      
+      <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
+        <p style="color: #999; font-size: 12px; margin: 0;">
+          © 2024 ElderConnect+. All rights reserved.
+        </p>
+      </div>
+    </div>
+  `
+  const text = `Your ElderConnect+ verification code is ${otp}. This code expires in 10 minutes.`
+
+  const shouldTrySmtp = emailProvider === 'smtp' || emailProvider === 'auto'
+  const shouldTryResend = emailProvider === 'resend' || emailProvider === 'auto'
+
+  if (shouldTrySmtp && smtpHost && smtpUser && smtpPassword) {
+    try {
+      const transporter = nodemailer.createTransport({
+        host: smtpHost,
+        port: smtpPort,
+        secure: smtpSecure,
+        auth: {
+          user: smtpUser,
+          pass: smtpPassword,
+        },
+      })
+
+      await transporter.sendMail({
+        from: `${fromName} <${smtpFromEmail}>`,
+        to: email,
+        subject: 'Your ElderConnect+ verification code',
+        html,
+        text,
+      })
+
+      console.log('SMTP email sent successfully')
+      return { sent: true }
+    } catch (error) {
+      const smtpError = formatEmailError(error)
+      console.error('SMTP send error:', smtpError)
+      if (emailProvider === 'smtp' || !shouldTryResend || !resendApiKey) {
+        return {
+          sent: false,
+          error: `SMTP failed: ${smtpError}`,
+        }
+      }
+      console.log('[INFO] Falling back to Resend after SMTP failure')
+    }
+  }
+
+  if (emailProvider === 'smtp' && (!smtpHost || !smtpUser || !smtpPassword)) {
+    return {
+      sent: false,
+      error: 'SMTP failed: SMTP credentials are incomplete.',
+    }
+  }
+
+  if (!shouldTryResend) {
+    return {
+      sent: false,
+      error: 'Email provider is set to SMTP only, and SMTP did not succeed.',
     }
   }
 
   try {
-    const html = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-          <h1 style="color: #333; margin: 0; font-size: 24px;">Your ElderConnect+ OTP</h1>
-        </div>
-        
-        <p style="color: #666; font-size: 16px; margin-bottom: 20px;">
-          Thank you for using ElderConnect+. Here's your one-time password to complete your login:
-        </p>
-        
-        <div style="background-color: #f0f4ff; padding: 30px; border-radius: 8px; text-align: center; margin: 30px 0;">
-          <p style="margin: 0; font-size: 12px; color: #999; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 10px;">
-            Your Code
-          </p>
-          <p style="margin: 0; font-size: 48px; font-weight: bold; color: #4f46e5; letter-spacing: 8px;">
-            ${otp}
-          </p>
-        </div>
-        
-        <p style="color: #999; font-size: 14px; margin: 20px 0;">
-          This code will expire in 10 minutes.
-        </p>
-        
-        <div style="border-top: 1px solid #eee; padding-top: 20px; margin-top: 30px;">
-          <p style="color: #999; font-size: 12px; margin: 0;">
-            <strong>Security Notice:</strong> If you didn't request this code, please ignore this email. 
-            Your account is secure and no one can access it without this code.
-          </p>
-        </div>
-        
-        <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
-          <p style="color: #999; font-size: 12px; margin: 0;">
-            © 2024 ElderConnect+. All rights reserved.
-          </p>
-        </div>
-      </div>
-    `
-
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -83,7 +149,7 @@ async function sendOTPEmail(email: string, otp: string): Promise<{ sent: boolean
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        from: `${fromName} <${fromEmail}>`,
+        from: `${fromName} <${resendFromEmail}>`,
         to: [email],
         subject: 'Your ElderConnect+ verification code',
         html
@@ -126,6 +192,29 @@ async function sendOTPEmail(email: string, otp: string): Promise<{ sent: boolean
     console.error('Email send error:', error)
     return { sent: false, error: 'Failed to send OTP email. Please try again.' }
   }
+}
+
+function formatEmailError(error: unknown): string {
+  if (error instanceof Error) {
+    const anyError = error as Error & {
+      code?: string
+      response?: string
+      responseCode?: number
+      command?: string
+    }
+
+    const details = [
+      anyError.code,
+      anyError.responseCode != null ? `responseCode=${anyError.responseCode}` : null,
+      anyError.command ? `command=${anyError.command}` : null,
+      anyError.message,
+      anyError.response,
+    ].filter(Boolean)
+
+    return details.join(' | ')
+  }
+
+  return String(error)
 }
 
 serve(async (req: Request) => {

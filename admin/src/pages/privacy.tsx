@@ -10,6 +10,10 @@ export default function PrivacyPolicyPage() {
     <PublicLayout>
       <Head>
         <title>Privacy Policy - ElderConnect+</title>
+        <meta
+          name="description"
+          content="Read how ElderConnect+ collects, uses, and protects personal information across the platform."
+        />
       </Head>
 
       <div className="max-w-4xl mx-auto px-4 py-12">
@@ -76,10 +80,10 @@ export default function PrivacyPolicyPage() {
               <h2 className="text-xl font-bold text-gray-900">How We Protect Your Data</h2>
             </div>
             <ul className="list-disc list-inside space-y-1 text-gray-600">
-              <li>End-to-end encryption for all communications</li>
-              <li>Secure data storage with industry-standard encryption</li>
-              <li>Regular security audits and penetration testing</li>
-              <li>Limited employee access on a need-to-know basis</li>
+              <li>Role-based access controls and scoped permissions in the platform</li>
+              <li>Managed infrastructure and hosted data storage providers</li>
+              <li>Authentication, logging, and audit features that support account security</li>
+              <li>Limited operational access to user information where needed to run the service</li>
             </ul>
           </section>
 
@@ -112,8 +116,8 @@ export default function PrivacyPolicyPage() {
             </ul>
             <p className="mt-4 text-gray-600">
               Contact us at{' '}
-              <a href="mailto:privacy@elderconnect.com" className="text-primary-600 hover:underline">
-                privacy@elderconnect.com
+              <a href="mailto:privacy@scotitech.com" className="text-primary-600 hover:underline">
+                privacy@scotitech.com
               </a>
             </p>
           </section>
@@ -122,8 +126,8 @@ export default function PrivacyPolicyPage() {
             <h2 className="text-xl font-bold text-gray-900 mb-4">Contact Us</h2>
             <p className="text-gray-600 mb-4">Questions about this privacy policy?</p>
             <div className="space-y-2 text-gray-600">
-              <p><strong>Email:</strong> privacy@elderconnect.com</p>
-              <p><strong>Phone:</strong> 1-800-ELDER-HELP</p>
+              <p><strong>Email:</strong> privacy@scotitech.com</p>
+              <p><strong>Support:</strong> Use the contact page or in-product support options.</p>
             </div>
           </section>
         </div>

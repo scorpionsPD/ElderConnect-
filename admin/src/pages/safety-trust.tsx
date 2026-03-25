@@ -8,23 +8,23 @@ import PublicLayout from '@/components/PublicLayout';
 const safetyFeatures = [
   {
     icon: <UserCheck className="w-8 h-8" />,
-    title: 'Background Checks',
-    description: 'Every volunteer undergoes comprehensive criminal background checks before joining.',
+    title: 'Profile Review',
+    description: 'Volunteer profiles, activity history, and reporting tools support safer coordination at launch.',
   },
   {
     icon: <Shield className="w-8 h-8" />,
-    title: 'Identity Verification',
-    description: 'We verify the identity of all users through government-issued ID and address verification.',
+    title: 'Clear Access Controls',
+    description: 'Role-based access, family permissions, and request-level workflows help keep information scoped correctly.',
   },
   {
     icon: <GraduationCap className="w-8 h-8" />,
-    title: 'Training Required',
-    description: 'All volunteers complete our safety and communication training program.',
+    title: 'Safety Guidance',
+    description: 'The platform is designed to reinforce safe communication, boundaries, and escalation paths.',
   },
   {
     icon: <Phone className="w-8 h-8" />,
-    title: 'Regular Check-ins',
-    description: 'Our team conducts regular check-ins and monitors all visits for quality and safety.',
+    title: 'Emergency Alerts',
+    description: 'Emergency actions can notify trusted contacts quickly when urgent help is needed.',
   },
 ];
 
@@ -49,6 +49,10 @@ export default function SafetyTrustPage() {
     <PublicLayout>
       <Head>
         <title>Safety & Trust - ElderConnect+</title>
+        <meta
+          name="description"
+          content="Understand how ElderConnect+ approaches safety, reporting, family visibility, and emergency support at launch."
+        />
       </Head>
 
       {/* Hero */}
@@ -57,7 +61,7 @@ export default function SafetyTrustPage() {
           <Shield className="w-16 h-16 mx-auto mb-6 opacity-90" />
           <h1 className="text-4xl font-bold mb-4">Your Safety is Our Priority</h1>
           <p className="text-xl opacity-90 max-w-2xl mx-auto">
-            We&apos;ve built multiple layers of protection to ensure every interaction on ElderConnect+ is safe and positive.
+            ElderConnect+ is designed to support safer companionship with clear reporting, family visibility, and emergency tools.
           </p>
         </div>
       </section>
@@ -83,14 +87,14 @@ export default function SafetyTrustPage() {
 
         {/* Process */}
         <section className="mb-16 bg-gray-100 rounded-2xl p-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">Our Vetting Process</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">How We Manage Trust At Launch</h2>
           <div className="flex flex-col md:flex-row gap-4">
             {[
-              { step: 1, title: 'Application', description: 'Detailed application with references' },
-              { step: 2, title: 'Background Check', description: 'Comprehensive criminal background check' },
-              { step: 3, title: 'Interview', description: 'Personal interview with our team' },
-              { step: 4, title: 'Training', description: '4+ hours of safety and skills training' },
-              { step: 5, title: 'Monitoring', description: 'Ongoing oversight and feedback' },
+              { step: 1, title: 'Profile Setup', description: 'Users complete role-specific profile details and preferences.' },
+              { step: 2, title: 'Connection Review', description: 'Requests, family links, and access rules are checked in-platform.' },
+              { step: 3, title: 'Messaging & History', description: 'Request activity and communication stay visible in the product.' },
+              { step: 4, title: 'Family Awareness', description: 'Families can stay informed through connected views and notifications.' },
+              { step: 5, title: 'Escalation', description: 'Emergency actions and reporting tools are available when something feels wrong.' },
             ].map((item, index) => (
               <div key={index} className="flex-1 bg-white rounded-xl p-4 text-center">
                 <div className="w-10 h-10 bg-green-600 text-white rounded-full flex items-center justify-center mx-auto mb-3 font-bold">
@@ -147,7 +151,7 @@ export default function SafetyTrustPage() {
               </p>
               <ul className="space-y-2 text-gray-700">
                 <li>• Press the <strong>Emergency Button</strong> in the app</li>
-                <li>• Call our 24/7 safety line: <strong>1-800-ELDER-SAFE</strong></li>
+                <li>• Contact your family member, emergency contact, or local support network</li>
                 <li>• For immediate danger, always call <strong>999</strong></li>
               </ul>
             </div>

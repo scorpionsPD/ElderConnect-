@@ -38,7 +38,7 @@ const features = [
   {
     icon: Phone,
     title: 'Emergency Support',
-    description: '24/7 emergency alert system with immediate response from our care network.',
+    description: 'Emergency alert tools that help elders reach family or trusted contacts quickly.',
     color: 'bg-red-100 text-red-600',
   },
   {
@@ -78,7 +78,7 @@ export default function WelcomePage() {
     <>
       <Head>
         <title>ElderConnect+ | Companionship for Seniors, Purpose for Volunteers</title>
-        <meta name="description" content="Connecting seniors with caring volunteers for companionship, support, and meaningful relationships. Free service, powered by community love." />
+        <meta name="description" content="ElderConnect+ helps elders, families, and volunteers coordinate companionship, health check-ins, family communication, and emergency support tools." />
       </Head>
 
       <div className="min-h-screen bg-white">
@@ -288,7 +288,7 @@ export default function WelcomePage() {
                 </div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-3">Get Matched</h3>
                 <p className="text-gray-600">
-                  Our system matches elders with compatible volunteers based on interests, location, and availability.
+                  Profiles, preferences, and availability help support better matching between elders and volunteers.
                 </p>
               </div>
 
@@ -330,7 +330,7 @@ export default function WelcomePage() {
                     'Regular visits from friendly volunteers',
                     'Help with technology, errands, and daily tasks',
                     'Someone to share hobbies and activities with',
-                    '24/7 emergency support system',
+                    'Emergency alerts that can notify family or trusted contacts',
                     'Stay connected with your family',
                   ].map((item, index) => (
                     <div key={index} className="flex items-center gap-3">
@@ -415,8 +415,8 @@ export default function WelcomePage() {
                 <div className="space-y-4 mb-8">
                   {[
                     'Flexible scheduling that fits your life',
-                    'Free training and ongoing support',
-                    'Background checks for everyone\'s safety',
+                    'Guidance and support as the programme grows',
+                    'Clear safeguarding expectations and in-app reporting tools',
                     'Match with elders who share your interests',
                     'Join a community of caring volunteers',
                   ].map((item, index) => (
@@ -531,11 +531,11 @@ export default function WelcomePage() {
                 <div className="grid md:grid-cols-3 gap-6 text-left">
                   <div>
                     <h4 className="font-semibold text-gray-900 mb-2">Safety First</h4>
-                    <p className="text-gray-600 text-sm">All volunteers undergo background checks and training</p>
+                    <p className="text-gray-600 text-sm">Safeguarding, reporting, and visit coordination stay central to the service.</p>
                   </div>
                   <div>
                     <h4 className="font-semibold text-gray-900 mb-2">Always Available</h4>
-                    <p className="text-gray-600 text-sm">24/7 support for emergencies and concerns</p>
+                    <p className="text-gray-600 text-sm">Emergency alerts help families and trusted contacts respond quickly.</p>
                   </div>
                   <div>
                     <h4 className="font-semibold text-gray-900 mb-2">Local Focus</h4>

@@ -33,12 +33,11 @@ const team = [
 ];
 
 const milestones = [
-  { year: '2020', title: 'Founded', description: 'Started in Edinburgh, Scotland' },
-  { year: '2021', title: 'Early Community Growth', description: 'Expanded local companionship support' },
-  { year: '2022', title: 'Program Development', description: 'Strengthened safety and volunteer training' },
-  { year: '2023', title: 'Service Expansion', description: 'Broadened support for elders and families' },
-  { year: '2024', title: 'Mobile Experience', description: 'Improved access through the app' },
-  { year: '2025', title: 'UK Rollout', description: 'Prepared for wider launch across the UK' },
+  { year: 'Phase 1', title: 'Research & Listening', description: 'Started from conversations about loneliness, isolation, and practical support needs.' },
+  { year: 'Phase 2', title: 'Service Design', description: 'Shaped the platform around companionship, family visibility, and emergency support.' },
+  { year: 'Phase 3', title: 'Safeguarding Focus', description: 'Refined trust, reporting, and care coordination features for launch readiness.' },
+  { year: 'Phase 4', title: 'Product Build', description: 'Built web and mobile experiences for elders, volunteers, and families.' },
+  { year: 'Phase 5', title: 'Launch Preparation', description: 'Prepared the platform for an initial public rollout in the UK.' },
 ];
 
 export default function AboutPage() {
@@ -46,6 +45,10 @@ export default function AboutPage() {
     <PublicLayout>
       <Head>
         <title>About Us - ElderConnect+</title>
+        <meta
+          name="description"
+          content="Learn about the mission behind ElderConnect+ and how the platform is being prepared for an initial UK launch."
+        />
       </Head>
 
       {/* Hero */}
@@ -75,8 +78,7 @@ export default function AboutPage() {
               through community support work and local care experiences.
             </p>
             <p>
-              In 2020, we decided to do something about it. What started with a small group of volunteers 
-              visiting seniors in Edinburgh has grown into a community effort spanning towns and cities across the UK.
+              The project has grown from that initial idea into a launch-ready platform focused on companionship, family communication, and practical support.
             </p>
           </div>
         </section>
@@ -152,7 +154,7 @@ export default function AboutPage() {
           <MapPin className="w-8 h-8 text-primary-600 mx-auto mb-4" />
           <h2 className="text-xl font-bold text-gray-900 mb-2">Where We Operate</h2>
           <p className="text-gray-600 mb-4">
-            ElderConnect+ is active across Scotland, England, Wales, and Northern Ireland.
+            ElderConnect+ is preparing for an initial UK launch, with product and service design centred on local community use.
           </p>
         </section>
 

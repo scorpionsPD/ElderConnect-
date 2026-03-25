@@ -6,10 +6,10 @@ import Button from '@/components/Button';
 import PublicLayout from '@/components/PublicLayout';
 
 const impactLevels = [
-  { amount: 25, title: 'Friend', description: 'Provides one companionship visit' },
-  { amount: 50, title: 'Supporter', description: 'Covers volunteer training', popular: true },
-  { amount: 100, title: 'Champion', description: 'Funds a month of weekly visits' },
-  { amount: 250, title: 'Guardian', description: 'Supports emergency response for a quarter' },
+  { amount: 25, title: 'Friend', description: 'Supports ElderConnect+ platform operations' },
+  { amount: 50, title: 'Supporter', description: 'Helps fund product and service delivery', popular: true },
+  { amount: 100, title: 'Champion', description: 'Contributes to launch and community growth' },
+  { amount: 250, title: 'Guardian', description: 'Provides broader support for platform development and care coordination' },
 ];
 
 export default function DonatePage() {
@@ -138,16 +138,20 @@ export default function DonatePage() {
   if (submitted) {
     return (
       <PublicLayout>
-        <Head>
-          <title>Thank You - ElderConnect+</title>
-        </Head>
+      <Head>
+        <title>Thank You - ElderConnect+</title>
+        <meta
+          name="description"
+          content="Thank you for supporting ElderConnect+ and the future of companionship and care coordination."
+        />
+      </Head>
         <div className="max-w-2xl mx-auto px-4 py-20 text-center">
           <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
             <Heart className="w-10 h-10 text-green-600" />
           </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-4">Thank You!</h1>
           <p className="text-xl text-gray-600 mb-8">
-            Your donation of £{finalAmount} will help bring companionship to seniors who need it most.
+            Your donation of £{finalAmount} helps support ElderConnect+ platform operations and launch growth.
           </p>
           <Button onClick={() => setSubmitted(false)}>Make Another Donation</Button>
         </div>
@@ -159,6 +163,10 @@ export default function DonatePage() {
     <PublicLayout>
       <Head>
         <title>Donate - ElderConnect+</title>
+        <meta
+          name="description"
+          content="Support ElderConnect+ with a donation to help fund product development, service coordination, and launch growth."
+        />
       </Head>
 
       {/* Hero */}
@@ -167,8 +175,7 @@ export default function DonatePage() {
           <Gift className="w-16 h-16 mx-auto mb-6 opacity-90" />
           <h1 className="text-4xl font-bold mb-4">Make a Difference Today</h1>
           <p className="text-xl opacity-90 max-w-2xl mx-auto">
-            Your donation helps us connect lonely seniors with caring companions. 
-            Every dollar brings more smiles, conversations, and friendship.
+            Your donation helps fund ElderConnect+ platform development, care coordination, and responsible launch growth.
           </p>
         </div>
       </section>

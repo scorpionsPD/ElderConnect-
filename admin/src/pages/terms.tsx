@@ -10,6 +10,10 @@ export default function TermsOfServicePage() {
     <PublicLayout>
       <Head>
         <title>Terms of Service - ElderConnect+</title>
+        <meta
+          name="description"
+          content="Review the terms that apply when using ElderConnect+ across web and mobile experiences."
+        />
       </Head>
 
       <div className="max-w-4xl mx-auto px-4 py-12">
@@ -79,7 +83,7 @@ export default function TermsOfServicePage() {
               <div>
                 <h3 className="font-semibold text-gray-800 mb-2">Volunteers Must Additionally:</h3>
                 <ul className="list-disc list-inside space-y-1">
-                  <li>Complete all required training modules</li>
+                  <li>Follow the guidance, safeguards, and community standards published in the platform</li>
                   <li>Follow safety protocols during visits</li>
                   <li>Respect elder privacy and boundaries</li>
                   <li>Never accept money or gifts from elders</li>
@@ -139,8 +143,8 @@ export default function TermsOfServicePage() {
             <h2 className="text-xl font-bold text-gray-900 mb-4">Contact Us</h2>
             <p className="text-gray-600 mb-4">Questions about these Terms?</p>
             <div className="space-y-2 text-gray-600">
-              <p><strong>Email:</strong> legal@elderconnect.com</p>
-              <p><strong>Phone:</strong> 1-800-ELDER-HELP</p>
+              <p><strong>Email:</strong> legal@scotitech.com</p>
+              <p><strong>Support:</strong> Use the contact page or in-product support options.</p>
             </div>
           </section>
         </div>
