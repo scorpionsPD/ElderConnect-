@@ -161,9 +161,12 @@ export default function AboutPage() {
         {/* CTA */}
         <section className="text-center">
           <h2 className="text-2xl font-bold text-gray-900 mb-4">Join Our Mission</h2>
-          <div className="flex justify-center">
+          <div className="flex flex-col sm:flex-row justify-center gap-4">
             <Link href="/signup">
               <Button size="lg">Get Started</Button>
+            </Link>
+            <Link href="/donate">
+              <Button size="lg" variant="secondary">Support With a Donation</Button>
             </Link>
           </div>
         </section>

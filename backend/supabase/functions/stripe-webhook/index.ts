@@ -16,20 +16,38 @@
  *   SUPABASE_SERVICE_ROLE_KEY
  *
  * Optional secrets:
- *   RESEND_API_KEY               (send receipt / failure emails)
+ *   EMAIL_HOST
+ *   EMAIL_PORT
+ *   EMAIL_SECURE
+ *   EMAIL_USER
+ *   EMAIL_PASSWORD
+ *   EMAIL_FROM
+ *   EMAIL_FROM_NAME
+ *   RESEND_API_KEY               (optional fallback)
  *   DONATION_EMAIL_FROM
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import nodemailer from 'npm:nodemailer@6.9.16'
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const webhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET')
+const smtpHost = Deno.env.get('EMAIL_HOST')
+const smtpPort = Number(Deno.env.get('EMAIL_PORT') || '465')
+const smtpSecure = (Deno.env.get('EMAIL_SECURE') || 'true').toLowerCase() === 'true'
+const smtpUser = Deno.env.get('EMAIL_USER')
+const smtpPassword = Deno.env.get('EMAIL_PASSWORD')
+const fromName = Deno.env.get('EMAIL_FROM_NAME') || 'ElderConnect+'
 const resendApiKey = Deno.env.get('RESEND_API_KEY')
-const donationFromEmail = Deno.env.get('DONATION_EMAIL_FROM') || 'donations@elderconnect.dev'
+const donationFromEmail =
+  Deno.env.get('DONATION_EMAIL_FROM') ||
+  Deno.env.get('EMAIL_FROM') ||
+  smtpUser ||
+  'donations@elderconnect.dev'
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
@@ -334,29 +352,64 @@ async function writeAuditLog(
 }
 
 async function sendReceiptEmail(to: string, amount: number, reference: string) {
-  if (!resendApiKey) return
-
-  await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${resendApiKey}`,
-    },
-    body: JSON.stringify({
-      from: donationFromEmail,
-      to: [to],
-      subject: 'Thank you for your ElderConnect+ donation 💙',
+  await sendDonationEmail(
+    {
+      to,
+      subject: 'Thank you for your ElderConnect+ donation',
       html: `
         <p>Thank you so much for your generous support of <strong>ElderConnect+</strong>.</p>
         <p><strong>Amount:</strong> £${Number.isFinite(amount) ? amount.toFixed(2) : '0.00'}</p>
         <p><strong>Reference:</strong> ${reference}</p>
         <p>Your donation helps connect lonely seniors with caring companions.</p>
       `,
-    }),
-  }).catch((err) => console.warn('sendReceiptEmail failed:', err))
+    },
+    'sendReceiptEmail',
+  )
 }
 
 async function sendFailureEmail(to: string, reason: string) {
+  await sendDonationEmail(
+    {
+      to,
+      subject: 'Your ElderConnect+ donation could not be processed',
+      html: `
+        <p>Unfortunately, your recent donation attempt was not successful.</p>
+        <p><strong>Reason:</strong> ${reason}</p>
+        <p>Please try again at <a href="https://elderconnect.app/donate">elderconnect.app/donate</a>.</p>
+      `,
+    },
+    'sendFailureEmail',
+  )
+}
+
+async function sendDonationEmail(
+  payload: { to: string; subject: string; html: string },
+  source: string,
+) {
+  if (smtpHost && smtpUser && smtpPassword) {
+    try {
+      const transporter = nodemailer.createTransport({
+        host: smtpHost,
+        port: smtpPort,
+        secure: smtpSecure,
+        auth: {
+          user: smtpUser,
+          pass: smtpPassword,
+        },
+      })
+
+      await transporter.sendMail({
+        from: `${fromName} <${donationFromEmail}>`,
+        to: payload.to,
+        subject: payload.subject,
+        html: payload.html,
+      })
+      return
+    } catch (err) {
+      console.warn(`${source} SMTP failed:`, err)
+    }
+  }
+
   if (!resendApiKey) return
 
   await fetch('https://api.resend.com/emails', {
@@ -367,15 +420,11 @@ async function sendFailureEmail(to: string, reason: string) {
     },
     body: JSON.stringify({
       from: donationFromEmail,
-      to: [to],
-      subject: 'Your ElderConnect+ donation could not be processed',
-      html: `
-        <p>Unfortunately, your recent donation attempt was not successful.</p>
-        <p><strong>Reason:</strong> ${reason}</p>
-        <p>Please try again at <a href="https://elderconnect.app/donate">elderconnect.app/donate</a>.</p>
-      `,
+      to: [payload.to],
+      subject: payload.subject,
+      html: payload.html,
     }),
-  }).catch((err) => console.warn('sendFailureEmail failed:', err))
+  }).catch((err) => console.warn(`${source} resend failed:`, err))
 }
 
 // ── Stripe signature verification (manual HMAC — no Stripe SDK needed) ───────

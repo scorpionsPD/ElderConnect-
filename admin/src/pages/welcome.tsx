@@ -584,12 +584,16 @@ export default function WelcomePage() {
                 </div>
                 
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <Button size="lg" className="bg-amber-500 hover:bg-amber-600" icon={<Heart className="w-5 h-5" />}>
-                    Make a Donation
-                  </Button>
-                  <Button variant="secondary" size="lg">
-                    Learn About Sponsorship
-                  </Button>
+                  <Link href="/donate">
+                    <Button size="lg" className="bg-amber-500 hover:bg-amber-600" icon={<Heart className="w-5 h-5" />}>
+                      Make a Donation
+                    </Button>
+                  </Link>
+                  <Link href="/contact">
+                    <Button variant="secondary" size="lg">
+                      Learn About Sponsorship
+                    </Button>
+                  </Link>
                 </div>
               </div>
               
