@@ -1,9 +1,12 @@
+import 'dart:io' show Platform;
+
 import 'package:elderconnect_plus/src/core/constants/app_constants.dart';
 import 'package:elderconnect_plus/src/presentation/providers/auth_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class DonationScreen extends ConsumerStatefulWidget {
   const DonationScreen({super.key});
@@ -13,6 +16,7 @@ class DonationScreen extends ConsumerStatefulWidget {
 }
 
 class _DonationScreenState extends ConsumerState<DonationScreen> {
+  static final Uri _donationUri = Uri.parse('https://elderconnect.app/donate');
   final TextEditingController _customAmountController = TextEditingController();
   final TextEditingController _messageController = TextEditingController();
 
@@ -33,7 +37,38 @@ class _DonationScreenState extends ConsumerState<DonationScreen> {
     return double.tryParse(_customAmountController.text.trim()) ?? 0;
   }
 
+  bool get _useExternalDonationFlow => Platform.isIOS;
+
+  Future<void> _openDonationWebsite() async {
+    final launched = await launchUrl(
+      _donationUri,
+      mode: LaunchMode.externalApplication,
+    );
+
+    if (!mounted) return;
+
+    if (!launched) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Unable to open the donation page right now.'),
+        ),
+      );
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Opening the donation page in Safari.'),
+      ),
+    );
+  }
+
   Future<void> _donate() async {
+    if (_useExternalDonationFlow) {
+      await _openDonationWebsite();
+      return;
+    }
+
     final amount = _finalAmount;
     if (amount <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -99,7 +134,7 @@ class _DonationScreenState extends ConsumerState<DonationScreen> {
           merchantDisplayName: 'ElderConnect+',
           style: ThemeMode.system,
           allowsDelayedPaymentMethods: true,
-          applePay: PaymentSheetApplePay(
+          applePay: const PaymentSheetApplePay(
             merchantCountryCode: AppConstants.stripeMerchantCountryCode,
           ),
         ),
@@ -190,91 +225,118 @@ class _DonationScreenState extends ConsumerState<DonationScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          const Text(
-            'Your donation funds companionship visits, family support tools, and emergency response services.',
-            style: TextStyle(height: 1.4),
+          Text(
+            _useExternalDonationFlow
+                ? 'If you would like to support ElderConnect+, you can continue on our website.'
+                : 'Your donation funds companionship visits, family support tools, and emergency response services.',
+            style: const TextStyle(height: 1.4),
           ),
-          const SizedBox(height: 16),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              for (final value in const [10.0, 25.0, 50.0, 100.0])
-                ChoiceChip(
-                  label: Text('£${value.toStringAsFixed(0)}'),
-                  selected: !_useCustomAmount && _selectedAmount == value,
-                  onSelected: (_) {
-                    setState(() {
-                      _useCustomAmount = false;
-                      _selectedAmount = value;
-                    });
-                  },
-                ),
-              ChoiceChip(
-                label: const Text('Custom'),
-                selected: _useCustomAmount,
-                onSelected: (_) {
-                  setState(() => _useCustomAmount = true);
-                },
-              ),
-            ],
-          ),
-          if (_useCustomAmount) ...[
+          if (_useExternalDonationFlow) ...[
             const SizedBox(height: 12),
-            TextField(
-              controller: _customAmountController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(
-                labelText: 'Custom amount (GBP)',
-                prefixText: '£ ',
-                border: OutlineInputBorder(),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                color: const Color(0xFFF8FAFC),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: const Text(
+                'Donations are completed on our website in your browser. No payment details are entered in the app.',
+                style: TextStyle(color: Colors.black87, height: 1.4),
               ),
             ),
           ],
           const SizedBox(height: 16),
-          TextField(
-            controller: _messageController,
-            maxLines: 3,
-            decoration: const InputDecoration(
-              labelText: 'Message (optional)',
-              border: OutlineInputBorder(),
-              hintText: 'Any note to share with our community team',
-            ),
-          ),
-          const SizedBox(height: 12),
-          SwitchListTile(
-            value: _isAnonymous,
-            title: const Text('Donate anonymously'),
-            onChanged: (value) => setState(() => _isAnonymous = value),
-          ),
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              color: const Color(0xFFF1F5F9),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          if (!_useExternalDonationFlow) ...[
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
               children: [
-                const Text('Total', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                Text(
-                  '£${amount.toStringAsFixed(2)}',
-                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
+                for (final value in const [10.0, 25.0, 50.0, 100.0])
+                  ChoiceChip(
+                    label: Text('£${value.toStringAsFixed(0)}'),
+                    selected: !_useCustomAmount && _selectedAmount == value,
+                    onSelected: (_) {
+                      setState(() {
+                        _useCustomAmount = false;
+                        _selectedAmount = value;
+                      });
+                    },
+                  ),
+                ChoiceChip(
+                  label: const Text('Custom'),
+                  selected: _useCustomAmount,
+                  onSelected: (_) {
+                    setState(() => _useCustomAmount = true);
+                  },
                 ),
               ],
             ),
-          ),
+            if (_useCustomAmount) ...[
+              const SizedBox(height: 12),
+              TextField(
+                controller: _customAmountController,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(
+                  labelText: 'Custom amount (GBP)',
+                  prefixText: '£ ',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+            const SizedBox(height: 16),
+            TextField(
+              controller: _messageController,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                labelText: 'Message (optional)',
+                border: OutlineInputBorder(),
+                hintText: 'Any note to share with our community team',
+              ),
+            ),
+            const SizedBox(height: 12),
+            SwitchListTile(
+              value: _isAnonymous,
+              title: const Text('Donate anonymously'),
+              onChanged: (value) => setState(() => _isAnonymous = value),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                color: const Color(0xFFF1F5F9),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Total', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                  Text(
+                    '£${amount.toStringAsFixed(2)}',
+                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 20),
           ElevatedButton.icon(
             onPressed: _isProcessing ? null : _donate,
-            icon: const Icon(Icons.favorite_outline),
-            label: Text(_isProcessing ? 'Processing...' : 'Donate securely'),
+            icon: Icon(_useExternalDonationFlow ? Icons.open_in_browser : Icons.favorite_outline),
+            label: Text(
+              _useExternalDonationFlow
+                  ? 'Open donation page'
+                  : _isProcessing
+                      ? 'Processing...'
+                      : 'Donate securely',
+            ),
           ),
           const SizedBox(height: 10),
-          const Text(
-            'Card and Apple Pay are supported by Stripe based on your device/browser availability.',
-            style: TextStyle(fontSize: 12, color: Colors.black54),
+          Text(
+            _useExternalDonationFlow
+                ? 'Safari will open our secure donation page.'
+                : 'Card and Apple Pay are supported by Stripe based on your device/browser availability.',
+            style: const TextStyle(fontSize: 12, color: Colors.black54),
           ),
         ],
       ),
