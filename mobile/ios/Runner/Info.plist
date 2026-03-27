@@ -28,10 +28,6 @@
 	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>ElderConnect+ uses the camera so you can update your profile photo.</string>
-	<key>NSHealthShareUsageDescription</key>
-	<string>ElderConnect+ reads selected health data to support wellness check-ins and provide better care insights.</string>
-	<key>NSHealthUpdateUsageDescription</key>
-	<string>ElderConnect+ writes selected wellness updates when you choose to sync your health check-in activity.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>ElderConnect+ uses your location to help share your current address during emergency and support workflows.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>

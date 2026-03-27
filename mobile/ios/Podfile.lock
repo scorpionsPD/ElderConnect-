@@ -6,8 +6,6 @@ PODS:
   - connectivity_plus (0.0.1):
     - Flutter
     - ReachabilitySwift
-  - device_info_plus (0.0.1):
-    - Flutter
   - Firebase/Analytics (10.25.0):
     - Firebase/Core
   - Firebase/Core (10.25.0):
@@ -127,8 +125,6 @@ PODS:
   - GoogleUtilities/UserDefaults (7.13.3):
     - GoogleUtilities/Logger
     - GoogleUtilities/Privacy
-  - health (13.3.1):
-    - Flutter
   - image_picker_ios (0.0.1):
     - Flutter
   - integration_test (0.0.1):
@@ -229,7 +225,6 @@ DEPENDENCIES:
   - app_links (from `.symlinks/plugins/app_links/ios`)
   - audio_session (from `.symlinks/plugins/audio_session/ios`)
   - connectivity_plus (from `.symlinks/plugins/connectivity_plus/ios`)
-  - device_info_plus (from `.symlinks/plugins/device_info_plus/ios`)
   - firebase_analytics (from `.symlinks/plugins/firebase_analytics/ios`)
   - firebase_core (from `.symlinks/plugins/firebase_core/ios`)
   - firebase_messaging (from `.symlinks/plugins/firebase_messaging/ios`)
@@ -237,7 +232,6 @@ DEPENDENCIES:
   - flutter_tts (from `.symlinks/plugins/flutter_tts/ios`)
   - geocoding_ios (from `.symlinks/plugins/geocoding_ios/ios`)
   - geolocator_apple (from `.symlinks/plugins/geolocator_apple/darwin`)
-  - health (from `.symlinks/plugins/health/ios`)
   - image_picker_ios (from `.symlinks/plugins/image_picker_ios/ios`)
   - integration_test (from `.symlinks/plugins/integration_test/ios`)
   - just_audio (from `.symlinks/plugins/just_audio/darwin`)
@@ -284,8 +278,6 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/audio_session/ios"
   connectivity_plus:
     :path: ".symlinks/plugins/connectivity_plus/ios"
-  device_info_plus:
-    :path: ".symlinks/plugins/device_info_plus/ios"
   firebase_analytics:
     :path: ".symlinks/plugins/firebase_analytics/ios"
   firebase_core:
@@ -300,8 +292,6 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/geocoding_ios/ios"
   geolocator_apple:
     :path: ".symlinks/plugins/geolocator_apple/darwin"
-  health:
-    :path: ".symlinks/plugins/health/ios"
   image_picker_ios:
     :path: ".symlinks/plugins/image_picker_ios/ios"
   integration_test:
@@ -335,7 +325,6 @@ SPEC CHECKSUMS:
   app_links: e70ca16b4b0f88253b3b3660200d4a10b4ea9795
   audio_session: 19e9480dbdd4e5f6c4543826b2e8b0e4ab6145fe
   connectivity_plus: bf0076dd84a130856aa636df1c71ccaff908fa1d
-  device_info_plus: bf2e3232933866d73fe290f2942f2156cdd10342
   Firebase: 0312a2352584f782ea56f66d91606891d4607f06
   firebase_analytics: cc06e24d6a2343c44f845b3112143db72d10ef78
   firebase_core: a626d00494efa398e7c54f25f1454a64c8abf197
@@ -352,7 +341,6 @@ SPEC CHECKSUMS:
   GoogleAppMeasurement: 9abf64b682732fed36da827aa2a68f0221fd2356
   GoogleDataTransport: 6c09b596d841063d76d4288cc2d2f42cc36e1e2a
   GoogleUtilities: ea963c370a38a8069cc5f7ba4ca849a60b6d7d15
-  health: c1dfe8bc28ccd5998a32bdd0963943bfe9ac8320
   image_picker_ios: 4f2f91b01abdb52842a8e277617df877e40f905b
   integration_test: 252f60fa39af5e17c3aa9899d35d908a0721b573
   just_audio: a42c63806f16995daf5b219ae1d679deb76e6a79
@@ -380,6 +368,6 @@ SPEC CHECKSUMS:
   url_launcher_ios: bb13df5870e8c4234ca12609d04010a21be43dfa
   webview_flutter_wkwebview: 29eb20d43355b48fe7d07113835b9128f84e3af4
 
-PODFILE CHECKSUM: ebfe087a7b6dd1b9a46bb84c2eade930d6aaf865
+PODFILE CHECKSUM: 9ab651b75f0f0925203edd690a2f660f29ab6c61
 
 COCOAPODS: 1.16.2
