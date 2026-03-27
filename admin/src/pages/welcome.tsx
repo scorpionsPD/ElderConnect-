@@ -25,8 +25,8 @@ import {
   X
 } from 'lucide-react';
 import Button from '@/components/Button';
+import AppStoreBadge from '@/components/AppStoreBadge';
 import { BRAND_ICON_ALT, BRAND_ICON_WITH_VERSION } from '@/utils/branding';
-import { APP_STORE_URL } from '@/utils/app-store';
 
 // Feature cards data
 const features = [
@@ -626,11 +626,7 @@ export default function WelcomePage() {
                   Already a Member? Log In
                 </Button>
               </Link>
-              <a href={APP_STORE_URL} target="_blank" rel="noreferrer">
-                <Button size="lg" variant="ghost" className="text-white border-white/30 hover:bg-white/10">
-                  Download on the App Store
-                </Button>
-              </a>
+              <AppStoreBadge className="bg-white text-black hover:bg-gray-100" />
             </div>
           </div>
         </section>

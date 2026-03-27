@@ -2,6 +2,7 @@ import React from 'react';
 import Link from 'next/link';
 import { Menu, X, LogOut } from 'lucide-react';
 import Button from '@/components/Button';
+import AppStoreBadge from '@/components/AppStoreBadge';
 import { useAuth } from '@/contexts/AuthContext';
 import { BRAND_ICON_ALT, BRAND_ICON_WITH_VERSION } from '@/utils/branding';
 import { APP_STORE_URL } from '@/utils/app-store';
@@ -59,9 +60,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
                   <Link href={dashboardHref}>
                     <Button variant="ghost">Dashboard</Button>
                   </Link>
-                  <a href={APP_STORE_URL} target="_blank" rel="noreferrer">
-                    <Button variant="secondary">Download on the App Store</Button>
-                  </a>
+                  <AppStoreBadge compact />
                   <Button variant="ghost" onClick={logout} className="flex items-center gap-1">
                     <LogOut className="w-4 h-4" />
                     Log Out
@@ -75,9 +74,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
                   <Link href="/signup">
                     <Button>Sign Up</Button>
                   </Link>
-                  <a href={APP_STORE_URL} target="_blank" rel="noreferrer">
-                    <Button variant="secondary">Download App</Button>
-                  </a>
+                  <AppStoreBadge compact />
                 </>
               )}
             </div>
@@ -163,9 +160,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
               Connecting generations through care, companionship, and community.
             </p>
             <div className="mt-5">
-              <a href={APP_STORE_URL} target="_blank" rel="noreferrer">
-                <Button variant="secondary">Download on the App Store</Button>
-              </a>
+              <AppStoreBadge />
             </div>
           </div>
 

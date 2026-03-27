@@ -2,9 +2,9 @@ import React, { useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { Gift, CheckCircle, Heart } from 'lucide-react';
+import AppStoreBadge from '@/components/AppStoreBadge';
 import Button from '@/components/Button';
 import PublicLayout from '@/components/PublicLayout';
-import { APP_STORE_URL } from '@/utils/app-store';
 
 const impactLevels = [
   { amount: 25, title: 'Friend', description: 'Supports ElderConnect+ platform operations' },
@@ -189,9 +189,7 @@ export default function DonatePage() {
               <h2 className="text-xl font-bold text-gray-900">Prefer to keep ElderConnect+ on your phone?</h2>
               <p className="text-sm text-gray-600">Download the iPhone app directly from the App Store.</p>
             </div>
-            <a href={APP_STORE_URL} target="_blank" rel="noreferrer" className="shrink-0">
-              <Button size="lg">Download on the App Store</Button>
-            </a>
+            <AppStoreBadge className="shrink-0" />
           </div>
         </div>
 

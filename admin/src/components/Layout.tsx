@@ -3,7 +3,7 @@ import { useRouter } from 'next/router'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 import apiClient from '@/utils/api-client'
-import { APP_STORE_URL } from '@/utils/app-store'
+import AppStoreBadge from '@/components/AppStoreBadge'
 import { 
   LayoutDashboard, 
   Users, 
@@ -203,11 +203,7 @@ export default function Layout({ children }: LayoutProps) {
                 <p className="text-sm font-medium text-gray-900">{userName || 'User'}</p>
                 <p className="text-xs text-gray-500">{userEmail}</p>
               </div>
-              <a href={APP_STORE_URL} target="_blank" rel="noreferrer">
-                <span className="inline-flex items-center rounded-lg bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700 transition-colors">
-                  Download App
-                </span>
-              </a>
+              <AppStoreBadge compact />
               <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center">
                 <span className="text-primary-700 font-medium text-sm">
                   {getInitials()}
