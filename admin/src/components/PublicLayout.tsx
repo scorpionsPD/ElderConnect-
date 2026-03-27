@@ -3,7 +3,8 @@ import Link from 'next/link';
 import { Menu, X, LogOut } from 'lucide-react';
 import Button from '@/components/Button';
 import { useAuth } from '@/contexts/AuthContext';
-import { BRAND_ICON_ALT, BRAND_ICON_URL } from '@/utils/branding';
+import { BRAND_ICON_ALT, BRAND_ICON_WITH_VERSION } from '@/utils/branding';
+import { APP_STORE_URL } from '@/utils/app-store';
 
 interface PublicLayoutProps {
   children: React.ReactNode;
@@ -27,7 +28,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
             {/* Logo */}
             <Link href="/welcome" className="flex items-center gap-2">
               <div className="w-10 h-10 bg-primary-100 rounded-xl flex items-center justify-center">
-                <img src={BRAND_ICON_URL} alt={BRAND_ICON_ALT} className="w-6 h-6 rounded" />
+                <img src={BRAND_ICON_WITH_VERSION} alt={BRAND_ICON_ALT} className="w-6 h-6 rounded" />
               </div>
               <span className="text-xl font-bold text-gray-900">ElderConnect+</span>
             </Link>
@@ -58,6 +59,9 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
                   <Link href={dashboardHref}>
                     <Button variant="ghost">Dashboard</Button>
                   </Link>
+                  <a href={APP_STORE_URL} target="_blank" rel="noreferrer">
+                    <Button variant="secondary">Download on the App Store</Button>
+                  </a>
                   <Button variant="ghost" onClick={logout} className="flex items-center gap-1">
                     <LogOut className="w-4 h-4" />
                     Log Out
@@ -71,6 +75,9 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
                   <Link href="/signup">
                     <Button>Sign Up</Button>
                   </Link>
+                  <a href={APP_STORE_URL} target="_blank" rel="noreferrer">
+                    <Button variant="secondary">Download App</Button>
+                  </a>
                 </>
               )}
             </div>
@@ -104,6 +111,14 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
                 <Link href="/contact" className="px-4 py-2 text-gray-600 hover:bg-gray-50 rounded-lg">
                   Contact
                 </Link>
+                <a
+                  href={APP_STORE_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-4 py-2 text-gray-600 hover:bg-gray-50 rounded-lg"
+                >
+                  Download App
+                </a>
                 <div className="flex gap-2 px-4 pt-4 border-t border-gray-100 mt-2">
                   {isAuthenticated ? (
                     <>
@@ -140,13 +155,18 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
           <div className="max-w-2xl mx-auto text-center mb-12">
             <div className="flex items-center justify-center gap-2 mb-4">
               <div className="w-10 h-10 bg-primary-600 rounded-xl flex items-center justify-center">
-                <img src={BRAND_ICON_URL} alt={BRAND_ICON_ALT} className="w-6 h-6 rounded" />
+                <img src={BRAND_ICON_WITH_VERSION} alt={BRAND_ICON_ALT} className="w-6 h-6 rounded" />
               </div>
               <span className="text-xl font-bold text-white">ElderConnect+</span>
             </div>
             <p className="text-sm">
               Connecting generations through care, companionship, and community.
             </p>
+            <div className="mt-5">
+              <a href={APP_STORE_URL} target="_blank" rel="noreferrer">
+                <Button variant="secondary">Download on the App Store</Button>
+              </a>
+            </div>
           </div>
 
           <div className="border-t border-gray-800 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">

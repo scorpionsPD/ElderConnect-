@@ -4,6 +4,7 @@ import { useRouter } from 'next/router';
 import { Gift, CheckCircle, Heart } from 'lucide-react';
 import Button from '@/components/Button';
 import PublicLayout from '@/components/PublicLayout';
+import { APP_STORE_URL } from '@/utils/app-store';
 
 const impactLevels = [
   { amount: 25, title: 'Friend', description: 'Supports ElderConnect+ platform operations' },
@@ -181,6 +182,19 @@ export default function DonatePage() {
       </section>
 
       <div className="max-w-4xl mx-auto px-4 py-12">
+        <div className="mb-8 rounded-2xl border border-primary-100 bg-primary-50 p-5">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-wide text-primary-700">Mobile App</p>
+              <h2 className="text-xl font-bold text-gray-900">Prefer to keep ElderConnect+ on your phone?</h2>
+              <p className="text-sm text-gray-600">Download the iPhone app directly from the App Store.</p>
+            </div>
+            <a href={APP_STORE_URL} target="_blank" rel="noreferrer" className="shrink-0">
+              <Button size="lg">Download on the App Store</Button>
+            </a>
+          </div>
+        </div>
+
         {/* Impact Levels */}
         <div className="grid md:grid-cols-4 gap-4 mb-8">
           {impactLevels.map((level) => (

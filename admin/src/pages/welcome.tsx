@@ -25,7 +25,8 @@ import {
   X
 } from 'lucide-react';
 import Button from '@/components/Button';
-import { BRAND_ICON_ALT, BRAND_ICON_URL } from '@/utils/branding';
+import { BRAND_ICON_ALT, BRAND_ICON_WITH_VERSION } from '@/utils/branding';
+import { APP_STORE_URL } from '@/utils/app-store';
 
 // Feature cards data
 const features = [
@@ -89,7 +90,7 @@ export default function WelcomePage() {
               {/* Logo */}
               <div className="flex items-center gap-2">
                 <div className="w-10 h-10 bg-primary-100 rounded-xl flex items-center justify-center">
-                    <img src={BRAND_ICON_URL} alt={BRAND_ICON_ALT} className="w-6 h-6 rounded" />
+                    <img src={BRAND_ICON_WITH_VERSION} alt={BRAND_ICON_ALT} className="w-6 h-6 rounded" />
                 </div>
                 <span className="text-xl font-bold text-gray-900">ElderConnect+</span>
               </div>
@@ -625,6 +626,11 @@ export default function WelcomePage() {
                   Already a Member? Log In
                 </Button>
               </Link>
+              <a href={APP_STORE_URL} target="_blank" rel="noreferrer">
+                <Button size="lg" variant="ghost" className="text-white border-white/30 hover:bg-white/10">
+                  Download on the App Store
+                </Button>
+              </a>
             </div>
           </div>
         </section>

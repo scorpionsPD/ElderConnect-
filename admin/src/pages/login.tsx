@@ -6,7 +6,7 @@ import { Mail, ArrowRight, Shield, RefreshCw } from 'lucide-react';
 import Button from '@/components/Button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
-import { BRAND_ICON_ALT, BRAND_ICON_URL } from '@/utils/branding';
+import { BRAND_ICON_ALT, BRAND_ICON_WITH_VERSION } from '@/utils/branding';
 
 // Route mapping based on role
 const getDashboard = (role: string) => {
@@ -183,7 +183,7 @@ export default function LoginPage() {
           {/* Logo */}
           <div className="text-center mb-8">
             <div className="w-16 h-16 bg-primary-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <img src={BRAND_ICON_URL} alt={BRAND_ICON_ALT} className="w-8 h-8 rounded" />
+              <img src={BRAND_ICON_WITH_VERSION} alt={BRAND_ICON_ALT} className="w-8 h-8 rounded" />
             </div>
             <h1 className="text-2xl font-bold text-primary-600">ElderConnect+</h1>
           </div>
