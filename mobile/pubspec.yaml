@@ -2,7 +2,7 @@ name: elderconnect_plus
 description: "Community-driven elderly support mobile app. Completely free, donation-supported, GDPR compliant."
 publish_to: 'none'
 
-version: 1.0.4+67
+version: 1.0.4+68
 
 environment:
   sdk: '>=3.0.0 <4.0.0'

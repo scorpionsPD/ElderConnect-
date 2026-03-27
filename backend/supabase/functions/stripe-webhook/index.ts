@@ -375,7 +375,7 @@ async function sendFailureEmail(to: string, reason: string) {
       html: `
         <p>Unfortunately, your recent donation attempt was not successful.</p>
         <p><strong>Reason:</strong> ${reason}</p>
-        <p>Please try again at <a href="https://elderconnect.app/donate">elderconnect.app/donate</a>.</p>
+        <p>Please try again at <a href="https://www.elderconnect.co.uk/donate">www.elderconnect.co.uk/donate</a>.</p>
       `,
     },
     'sendFailureEmail',

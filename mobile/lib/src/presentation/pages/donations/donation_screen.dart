@@ -16,7 +16,7 @@ class DonationScreen extends ConsumerStatefulWidget {
 }
 
 class _DonationScreenState extends ConsumerState<DonationScreen> {
-  static final Uri _donationUri = Uri.parse('https://elderconnect.app/donate');
+  static final Uri _donationUri = Uri.parse('https://www.elderconnect.co.uk/donate');
   final TextEditingController _customAmountController = TextEditingController();
   final TextEditingController _messageController = TextEditingController();
 
